@@ -6,9 +6,15 @@ export const GenreFilter = ({
   onSelectGenre,
   className = ""
 }) => {
+  // Guarantee "All" is always the first chip
+  const sortedGenres = React.useMemo(() => {
+    const list = Array.isArray(genres) ? genres.filter((g) => g && g !== 'All') : [];
+    return ['All', ...list];
+  }, [genres]);
+
   return (
     <div className={`flex items-center gap-2 overflow-x-auto no-scrollbar py-1 ${className}`}>
-      {genres.map((genre) => {
+      {sortedGenres.map((genre) => {
         const isSelected = selectedGenre === genre;
         return (
           <button

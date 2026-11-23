@@ -11,9 +11,9 @@ export const INITIAL_USER_PROFILE = {
 };
 
 export const ALL_GENRES = [
+  "All",
   "Action",
   "Adventure",
-  "All",
   "Animation",
   "Comedy",
   "Crime",

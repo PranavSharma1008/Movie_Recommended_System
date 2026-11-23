@@ -211,7 +211,8 @@ export const getGenres = async (req, res, next) => {
       genres = Array.from(set);
     }
 
-    const uniqueGenres = Array.from(new Set(['All', 'Indian Cinema', ...genres])).filter(Boolean).sort();
+    const sorted = Array.from(new Set(genres)).filter((g) => g && g !== 'All').sort();
+    const uniqueGenres = ['All', ...sorted];
 
     res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     res.status(200).json({
