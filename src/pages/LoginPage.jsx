@@ -196,7 +196,6 @@ export const LoginPage = () => {
                         required={isRegister}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="e.g. Alex Morgan"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-cinema-900/80 border border-cinema-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cinema-accent"
                       />
                     </div>
@@ -214,7 +213,6 @@ export const LoginPage = () => {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-cinema-900/80 border border-cinema-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cinema-accent"
                     />
                   </div>
@@ -233,7 +231,6 @@ export const LoginPage = () => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
                       className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-cinema-900/80 border border-cinema-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cinema-accent"
                     />
                     <button
@@ -320,7 +317,6 @@ export const LoginPage = () => {
                       required
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="123456"
                       className="w-full text-center pl-10 pr-4 py-3 rounded-xl bg-cinema-900/90 border-2 border-cinema-accent/70 text-white placeholder-slate-600 font-mono text-2xl font-bold tracking-[0.4em] focus:outline-none focus:border-cinema-cyan focus:ring-2 focus:ring-cinema-cyan/20 transition-all"
                     />
                   </div>
