@@ -144,6 +144,10 @@ Multi-tier decoupled architecture:
 - [x] Clickable Cast Profiles: Updated `MovieDetailsPage.jsx` cast member cards to link directly to `/discover?search=<actor>` for one-click filmography browsing.
 - [x] Rebranded Website to Movie+: Updated platform branding to **Movie+** across header navbar, footer, login portal, browser document title (`<title>Movie+ — AI-Driven Movie Recommendation System</title>`), email templates, and backend health status.
 - [x] Isolated Watchlist Storage: Separated `inWatchlist` from `watched` in `WatchlistSchema` and `watchlistController.js`. Only movies explicitly added via "Add to Watchlist" appear in the user's Watchlist queue. Marking movies watched or submitting ratings no longer injects titles into Watchlist. Cleared pre-seeded watchlist items from `seeder.js` and database so all user watchlists start completely empty by default.
+- [x] Official Movie+ Brand Logo: Authored high-definition vector logo component `src/components/BrandLogo.jsx` with a modern streaming mark (cinema clapperboard, glowing play icon, and radiant `+` symbol) and integrated across Navbar, Footer, LoginPage, and SVG favicon in `index.html`.
+- [x] Profile Image Upload & Customizer: Added interactive photo upload to `src/pages/ProfilePage.jsx` allowing users to upload personal photos from their device (`<Camera>` overlay & file picker), enter custom image URLs, or select curated persona presets with live FileReader preview and backend sync.
+- [x] Profile Watchlist Showcase: Added "My Watchlist Queue" preview section with movie posters and metadata in `ProfilePage.jsx`.
+- [!] User Constraint Noted: Do NOT push code to GitHub until explicit user command.
 
 ## 17. Current Development Status
 - Full-scale Security, Quality, and Production Readiness Audit completed (Phases 1 & 2).

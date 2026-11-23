@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useMovies } from '../context/MovieContext';
 import { GlobalSearchModal } from './GlobalSearchModal';
+import { BrandLogo } from './BrandLogo';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -77,16 +78,7 @@ export const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cinema-accent to-rose-700 flex items-center justify-center shadow-lg shadow-cinema-accent/30 group-hover:scale-105 transition-transform">
-              <Film className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-extrabold text-xl tracking-tight text-white flex items-center">
-                Movie<span className="text-cinema-accent">+</span>
-              </span>
-            </div>
-          </Link>
+          <BrandLogo size="md" />
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-1 lg:gap-2">

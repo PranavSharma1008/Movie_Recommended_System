@@ -1,6 +1,7 @@
 import React from 'react';
 import { Film, Compass, Bookmark, User, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { BrandLogo } from './BrandLogo';
 
 export const Footer = () => {
   return (
@@ -9,14 +10,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           {/* Brand & Project Info */}
           <div className="md:col-span-2 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cinema-accent to-rose-700 flex items-center justify-center text-white font-bold shadow-md shadow-cinema-accent/30">
-                <Film className="w-4 h-4" />
-              </div>
-              <span className="font-display font-extrabold text-lg text-white">
-                Movie<span className="text-cinema-accent">+</span>
-              </span>
-            </div>
+            <BrandLogo size="md" />
 
             <p className="text-slate-300 leading-relaxed max-w-md">
               Your premier destination for cinema discovery, curated world masterpieces, and intelligent content-based movie recommendations.

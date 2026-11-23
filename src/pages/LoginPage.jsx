@@ -15,6 +15,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { BrandLogo } from '../components/BrandLogo';
 
 export const LoginPage = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -130,15 +131,10 @@ export const LoginPage = () => {
       {/* Main Auth Container */}
       <div className="relative z-10 w-full max-w-md mx-auto">
         {/* Brand Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-cinema-accent to-rose-700 shadow-xl shadow-cinema-accent/30 mb-3">
-            <Film className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="font-display font-extrabold text-3xl text-white tracking-tight">
-            Movie<span className="text-cinema-accent">+</span>
-          </h1>
+        <div className="text-center mb-6 flex flex-col items-center">
+          <BrandLogo size="lg" to={null} className="justify-center mb-2" />
           <p className="text-xs text-slate-400 mt-1">
-            Personalized Movie Recommendation Engine & Privacy Guard
+            Personalized Movie Recommendation Engine & Streaming Hub
           </p>
         </div>
 
