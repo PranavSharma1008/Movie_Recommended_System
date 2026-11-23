@@ -180,3 +180,4 @@ cd server && npm test
 - Video trailers powered by **YouTube Embed API**.
 
 *© 2026 Movie+ Recommendation Platform. All rights reserved.*
+# AI-Powered-Movie-Recomedation-System
