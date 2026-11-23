@@ -47,7 +47,9 @@ export const WatchlistPage = () => {
   const displayMovies = useMemo(() => {
     return watchlistMovies
       .filter((movie) => {
-        const isMovieWatched = (watched || []).includes(movie.id);
+        const isMovieWatched = (watched || []).some(
+          (id) => String(id) === String(movie.id) || String(id) === String(movie.tmdbId)
+        );
         if (filterMode === 'unwatched') return !isMovieWatched;
         if (filterMode === 'watched') return isMovieWatched;
         return true;
@@ -60,7 +62,9 @@ export const WatchlistPage = () => {
       });
   }, [watchlistMovies, filterMode, sortBy, watched]);
 
-  const watchedInWatchlistCount = watchlistMovies.filter((m) => (watched || []).includes(m.id)).length;
+  const watchedInWatchlistCount = watchlistMovies.filter((m) =>
+    (watched || []).some((id) => String(id) === String(m.id) || String(id) === String(m.tmdbId))
+  ).length;
 
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
@@ -181,7 +185,9 @@ export const WatchlistPage = () => {
           {/* Watchlist Cards List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayMovies.map((movie) => {
-              const isMovieWatched = watched.includes(movie.id);
+              const isMovieWatched = (watched || []).some(
+                (id) => String(id) === String(movie.id) || String(id) === String(movie.tmdbId)
+              );
 
               return (
                 <div

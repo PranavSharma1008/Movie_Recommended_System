@@ -148,6 +148,7 @@ Multi-tier decoupled architecture:
 - [x] Positioned "All" as First Genre Filter Chip: Updated `src/data/moviesData.js`, `src/components/GenreFilter.jsx`, and backend `server/controllers/movieController.js` to guarantee `"All"` is always the first chip (`['All', 'Action', 'Adventure', ...]`) on both client and server.
 - [x] Profile Image Upload & Customizer: Added interactive photo upload to `src/pages/ProfilePage.jsx` allowing users to upload personal photos from their device (`<Camera>` overlay & file picker), enter custom image URLs, or select curated persona presets with live FileReader preview and backend sync.
 - [x] Profile Watchlist Showcase: Added "My Watchlist Queue" preview section with movie posters and metadata in `ProfilePage.jsx`.
+- [x] Fixed Watchlist Data Loss on Logout & Login: Resolved race condition where in-memory React state prematurely overwrote user local storage with empty arrays during user context switches. Added `loadedUserKeyRef` and `isLoadedRef` guards in `MovieContext.jsx`, normalized all movie ID references across client and server (`String(movieId)`), synchronized authoritative state from MongoDB on login without flickering or data loss, and ensured immediate local persistence during toggle actions.
 - [!] User Constraint Noted: Do NOT push code to GitHub until explicit user command.
 
 ## 17. Current Development Status

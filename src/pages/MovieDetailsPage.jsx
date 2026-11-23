@@ -38,7 +38,7 @@ export const MovieDetailsPage = () => {
     openTrailer 
   } = useMovies();
 
-  const movie = movies.find((m) => m.id === id);
+  const movie = (movies || []).find((m) => String(m.id) === String(id) || String(m.tmdbId) === String(id));
 
   // Scroll to top when movie changes
   useEffect(() => {

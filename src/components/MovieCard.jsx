@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Play, Plus, Check, Bookmark, BookmarkCheck, Eye, EyeOff } from 'lucide-react';
+import { Star, Play, Check, Bookmark, BookmarkCheck, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovies } from '../context/MovieContext';
 import { MoviePoster } from './MoviePoster';

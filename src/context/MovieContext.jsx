@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { MOVIES_DATA, ALL_GENRES } from '../data/moviesData';
 import { getPersonalizedRecommendations, getSimilarMovies } from '../utils/recommendationEngine';
 import { useToast } from './ToastContext';
@@ -41,7 +41,7 @@ export const MovieProvider = ({ children }) => {
     try {
       if (!val) return [];
       const p = JSON.parse(val);
-      return Array.isArray(p) ? p : [];
+      return Array.isArray(p) ? p.map(String) : [];
     } catch {
       return [];
     }
@@ -57,7 +57,9 @@ export const MovieProvider = ({ children }) => {
     }
   };
 
-  const userKey = user?.email || 'guest';
+  const userKey = user?.email ? user.email.toLowerCase().trim() : 'guest';
+  const loadedUserKeyRef = useRef(userKey);
+  const isLoadedRef = useRef(false);
 
   // Watchlist state scoped to current account
   const [watchlist, setWatchlist] = useState(() => {
@@ -83,143 +85,195 @@ export const MovieProvider = ({ children }) => {
   // Load account data from backend MongoDB or user-scoped cache on login / user switch
   useEffect(() => {
     let isMounted = true;
+    const currentKey = user?.email ? user.email.toLowerCase().trim() : 'guest';
 
-    const loadUserAccountData = async () => {
-      const currentKey = user?.email || 'guest';
+    // Guard against race condition: mark loading for the new userKey
+    loadedUserKeyRef.current = currentKey;
+    isLoadedRef.current = false;
 
-      // 1. Load from local cache for this specific user
+    // 1. Immediately hydrate from local cache for currentKey without delay
+    const cachedWatchlist = safeParseArray(localStorage.getItem(`cinepulse_watchlist_${currentKey}`));
+    const cachedWatched = safeParseArray(localStorage.getItem(`cinepulse_watched_${currentKey}`));
+    const cachedRatings = safeParseObject(localStorage.getItem(`cinepulse_ratings_${currentKey}`));
+
+    setWatchlist(cachedWatchlist);
+    setWatched(cachedWatched);
+    setUserRatings(cachedRatings);
+
+    // If unauthenticated or guest session, initial hydration is complete
+    if (!isAuthenticated || !user) {
+      isLoadedRef.current = true;
+      return () => { isMounted = false; };
+    }
+
+    // 2. For authenticated users, synchronize authoritative state from backend API
+    const syncBackendData = async () => {
       try {
-        const cachedWatchlist = safeParseArray(localStorage.getItem(`cinepulse_watchlist_${currentKey}`));
-        const cachedWatched = safeParseArray(localStorage.getItem(`cinepulse_watched_${currentKey}`));
-        const cachedRatings = safeParseObject(localStorage.getItem(`cinepulse_ratings_${currentKey}`));
-
-        if (isMounted) {
-          setWatchlist(cachedWatchlist);
-          setWatched(cachedWatched);
-          setUserRatings(cachedRatings);
+        const token = localStorage.getItem('cinepulse_token');
+        if (!token) {
+          isLoadedRef.current = true;
+          return;
         }
-      } catch {}
 
-      // 2. If authenticated, fetch real data from backend API
-      if (isAuthenticated && localStorage.getItem('cinepulse_token')) {
-        try {
-          const backendData = await api.getWatchlist();
-          if (isMounted && backendData) {
-            if (Array.isArray(backendData.watchlist)) {
-              setWatchlist(backendData.watchlist);
-              localStorage.setItem(`cinepulse_watchlist_${currentKey}`, JSON.stringify(backendData.watchlist));
-            }
-            if (Array.isArray(backendData.watched)) {
-              setWatched(backendData.watched);
-              localStorage.setItem(`cinepulse_watched_${currentKey}`, JSON.stringify(backendData.watched));
-            }
-            if (backendData.userRatings && typeof backendData.userRatings === 'object') {
-              setUserRatings(backendData.userRatings);
-              localStorage.setItem(`cinepulse_ratings_${currentKey}`, JSON.stringify(backendData.userRatings));
-            }
+        const backendData = await api.getWatchlist();
+        if (!isMounted || loadedUserKeyRef.current !== currentKey) {
+          return;
+        }
+
+        if (backendData) {
+          if (Array.isArray(backendData.watchlist)) {
+            const normalizedWatchlist = backendData.watchlist.map(String);
+            setWatchlist(normalizedWatchlist);
+            localStorage.setItem(`cinepulse_watchlist_${currentKey}`, JSON.stringify(normalizedWatchlist));
           }
-        } catch {
-          // Gracefully maintain client cache if offline
+          if (Array.isArray(backendData.watched)) {
+            const normalizedWatched = backendData.watched.map(String);
+            setWatched(normalizedWatched);
+            localStorage.setItem(`cinepulse_watched_${currentKey}`, JSON.stringify(normalizedWatched));
+          }
+          if (backendData.userRatings && typeof backendData.userRatings === 'object') {
+            setUserRatings(backendData.userRatings);
+            localStorage.setItem(`cinepulse_ratings_${currentKey}`, JSON.stringify(backendData.userRatings));
+          }
+        }
+      } catch (err) {
+        // Maintain local storage cache if offline
+      } finally {
+        if (isMounted && loadedUserKeyRef.current === currentKey) {
+          isLoadedRef.current = true;
         }
       }
     };
 
-    loadUserAccountData();
+    syncBackendData();
 
     return () => {
       isMounted = false;
     };
   }, [user?.email, user?.id, isAuthenticated]);
 
-  // Persist state changes to account-scoped local cache
+  // Persist state changes to account-scoped local cache ONLY when fully loaded for the current user
   useEffect(() => {
+    if (!isLoadedRef.current || loadedUserKeyRef.current !== userKey) return;
     localStorage.setItem(`cinepulse_watchlist_${userKey}`, JSON.stringify(watchlist || []));
   }, [watchlist, userKey]);
 
   useEffect(() => {
+    if (!isLoadedRef.current || loadedUserKeyRef.current !== userKey) return;
     localStorage.setItem(`cinepulse_watched_${userKey}`, JSON.stringify(watched || []));
   }, [watched, userKey]);
 
   useEffect(() => {
+    if (!isLoadedRef.current || loadedUserKeyRef.current !== userKey) return;
     localStorage.setItem(`cinepulse_ratings_${userKey}`, JSON.stringify(userRatings || {}));
   }, [userRatings, userKey]);
 
   // Derived user genres (empty by default)
   const favoriteGenres = Array.isArray(user?.favoriteGenres) ? user.favoriteGenres : [];
 
-  // Toggle Watchlist with live backend sync
+  // Toggle Watchlist with live backend sync & immediate local persistence
   const toggleWatchlist = (movieId) => {
+    if (!movieId) return;
     if (!isAuthenticated) {
       showToast('Please sign in to save movies to your watchlist.', 'info');
       return;
     }
-    const movie = (movies || []).find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
+    const strId = String(movieId).trim();
+    const movie = (movies || []).find((m) => String(m.id) === strId || String(m.tmdbId) === strId);
     const title = movie ? movie.title : 'Movie';
 
     setWatchlist((prev) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      const exists = arr.includes(movieId);
+      const arr = Array.isArray(prev) ? prev.map(String) : [];
+      const exists = arr.some((id) => id === strId);
+      let updated;
       if (exists) {
         showToast(`Removed "${title}" from Watchlist`, 'info');
-        return arr.filter((id) => id !== movieId);
+        updated = arr.filter((id) => id !== strId);
       } else {
         showToast(`Added "${title}" to your Watchlist!`, 'success');
-        return [...arr, movieId];
+        updated = [...arr, strId];
       }
+      localStorage.setItem(`cinepulse_watchlist_${userKey}`, JSON.stringify(updated));
+      return updated;
     });
 
-    api.toggleWatchlist(movieId).catch(() => {});
+    api.toggleWatchlist(strId).catch(() => {});
   };
 
-  const isInWatchlist = (movieId) => Array.isArray(watchlist) && watchlist.includes(movieId);
+  const isInWatchlist = (movieId) => {
+    if (!movieId || !Array.isArray(watchlist)) return false;
+    const strId = String(movieId).trim();
+    return watchlist.some((id) => String(id) === strId);
+  };
 
-  // Toggle Watched with live backend sync
+  // Toggle Watched with live backend sync & immediate local persistence
   const toggleWatched = (movieId) => {
+    if (!movieId) return;
     if (!isAuthenticated) {
       showToast('Please sign in to record watched films.', 'info');
       return;
     }
-    const movie = (movies || []).find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
+    const strId = String(movieId).trim();
+    const movie = (movies || []).find((m) => String(m.id) === strId || String(m.tmdbId) === strId);
     const title = movie ? movie.title : 'Movie';
 
     setWatched((prev) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      const isAlreadyWatched = arr.includes(movieId);
+      const arr = Array.isArray(prev) ? prev.map(String) : [];
+      const isAlreadyWatched = arr.some((id) => id === strId);
+      let updated;
       if (isAlreadyWatched) {
         showToast(`Unmarked "${title}" as watched`, 'info');
-        return arr.filter((id) => id !== movieId);
+        updated = arr.filter((id) => id !== strId);
       } else {
         showToast(`Marked "${title}" as watched! Recommendations updated.`, 'success');
-        return [...arr, movieId];
+        updated = [...arr, strId];
       }
+      localStorage.setItem(`cinepulse_watched_${userKey}`, JSON.stringify(updated));
+      return updated;
     });
 
-    api.toggleWatched(movieId).catch(() => {});
+    api.toggleWatched(strId).catch(() => {});
   };
 
-  const isWatched = (movieId) => Array.isArray(watched) && watched.includes(movieId);
+  const isWatched = (movieId) => {
+    if (!movieId || !Array.isArray(watched)) return false;
+    const strId = String(movieId).trim();
+    return watched.some((id) => String(id) === strId);
+  };
 
-  // Rate Movie with live backend sync
+  // Rate Movie with live backend sync & immediate local persistence
   const rateMovie = (movieId, rating) => {
+    if (!movieId) return;
     if (!isAuthenticated) {
       showToast('Please sign in to rate movies.', 'info');
       return;
     }
-    const movie = movies.find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
+    const strId = String(movieId).trim();
+    const movie = movies.find((m) => String(m.id) === strId || String(m.tmdbId) === strId);
     const title = movie ? movie.title : 'Movie';
 
-    setUserRatings((prev) => ({
-      ...prev,
-      [movieId]: rating
-    }));
+    setUserRatings((prev) => {
+      const updated = {
+        ...prev,
+        [strId]: rating
+      };
+      localStorage.setItem(`cinepulse_ratings_${userKey}`, JSON.stringify(updated));
+      return updated;
+    });
 
     // Auto mark as watched if rated
-    if (!watched.includes(movieId)) {
-      setWatched((prev) => [...prev, movieId]);
-    }
+    setWatched((prev) => {
+      const arr = Array.isArray(prev) ? prev.map(String) : [];
+      if (!arr.some((id) => id === strId)) {
+        const updated = [...arr, strId];
+        localStorage.setItem(`cinepulse_watched_${userKey}`, JSON.stringify(updated));
+        return updated;
+      }
+      return arr;
+    });
 
     showToast(`Rated "${title}" ${rating}★!`, 'success');
-    api.submitRating(movieId, rating).catch(() => {});
+    api.submitRating(strId, rating).catch(() => {});
   };
 
   // Toggle Favorite Genre in Profile
@@ -281,7 +335,7 @@ export const MovieProvider = ({ children }) => {
     return getPersonalizedRecommendations({
       allMovies: movies,
       favoriteGenres,
-      watchedMovieIds: watched,
+      watchedMovieIds: (watched || []).map(String),
       userRatings,
       algorithmMode
     });
@@ -290,8 +344,8 @@ export const MovieProvider = ({ children }) => {
   // Last watched movie for "Because You Watched"
   const lastWatchedMovie = useMemo(() => {
     if (!watched.length) return null;
-    const lastId = watched[watched.length - 1];
-    return movies.find((m) => String(m.id) === String(lastId) || String(m.tmdbId) === String(lastId)) || null;
+    const lastId = String(watched[watched.length - 1]);
+    return movies.find((m) => String(m.id) === lastId || String(m.tmdbId) === lastId) || null;
   }, [watched, movies]);
 
   const becauseYouWatchedRecommendations = useMemo(() => {

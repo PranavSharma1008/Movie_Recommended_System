@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Star, Calendar, ArrowRight, Film } from 'lucide-react';
+import { Search, X, Star, ArrowRight, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovies } from '../context/MovieContext';
 import { MoviePoster } from './MoviePoster';

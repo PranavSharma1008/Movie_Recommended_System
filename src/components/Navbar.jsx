@@ -10,9 +10,7 @@ import {
   Menu, 
   X, 
   Compass, 
-  CheckCircle,
-  RotateCcw,
-  Sliders
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMovies } from '../context/MovieContext';
