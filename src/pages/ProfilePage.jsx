@@ -77,7 +77,7 @@ export const ProfilePage = () => {
           to="/login"
           className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cinema-accent hover:bg-cinema-accentHover text-white text-xs font-bold shadow-md shadow-cinema-accent/30 transition-all"
         >
-          Sign In to CinePulse
+          Sign In to Movie+
         </Link>
       </div>
     );

@@ -28,12 +28,17 @@ export const TrailerModal = () => {
       {/* Backdrop click dismiss */}
       <div className="absolute inset-0" onClick={closeTrailer} />
 
-      <div className="relative w-full max-w-4xl bg-cinema-850 border border-cinema-700/60 rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col max-h-[92vh]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trailer-modal-title"
+        className="relative w-full max-w-4xl bg-cinema-850 border border-cinema-700/60 rounded-2xl overflow-hidden shadow-2xl z-10 flex flex-col max-h-[92vh]"
+      >
         {/* Header Bar */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-cinema-700/50 bg-cinema-900/90">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-cinema-accent animate-ping" />
-            <h3 className="font-bold text-white text-base md:text-lg truncate">
+            <h3 id="trailer-modal-title" className="font-bold text-white text-base md:text-lg truncate">
               {activeTrailerMovie.title} — Official Trailer
             </h3>
           </div>

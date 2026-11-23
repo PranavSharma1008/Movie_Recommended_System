@@ -135,7 +135,7 @@ export const LoginPage = () => {
             <Film className="w-8 h-8 text-white" />
           </div>
           <h1 className="font-display font-extrabold text-3xl text-white tracking-tight">
-            Cine<span className="text-cinema-accent">Pulse</span>
+            Movie<span className="text-cinema-accent">+</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Personalized Movie Recommendation Engine & Privacy Guard
@@ -186,12 +186,13 @@ export const LoginPage = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {isRegister && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label htmlFor="auth-name" className="block text-xs font-semibold text-slate-300 mb-1.5">
                       Full Name
                     </label>
                     <div className="relative">
                       <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                       <input
+                        id="auth-name"
                         type="text"
                         required={isRegister}
                         value={name}
@@ -203,12 +204,13 @@ export const LoginPage = () => {
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Email Address
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
+                      id="auth-email"
                       type="email"
                       required
                       value={email}
@@ -220,13 +222,14 @@ export const LoginPage = () => {
 
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-300">
+                    <label htmlFor="auth-password" className="block text-xs font-semibold text-slate-300">
                       Password
                     </label>
                   </div>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                     <input
+                      id="auth-password"
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
@@ -266,7 +269,7 @@ export const LoginPage = () => {
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      <span>{isRegister ? 'Send Verification Code' : 'Sign In to CinePulse'}</span>
+                      <span>{isRegister ? 'Send Verification Code' : 'Sign In to Movie+'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -303,12 +306,13 @@ export const LoginPage = () => {
               {/* Security OTP Input Form */}
               <form onSubmit={handleVerifySubmit} className="space-y-4">
                 <div>
-                  <label className="block text-center text-xs font-semibold text-slate-300 mb-2">
+                  <label htmlFor="auth-otp" className="block text-center text-xs font-semibold text-slate-300 mb-2">
                     Enter 6-Digit Security Code
                   </label>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 text-slate-400 absolute left-4 top-3.5" />
                     <input
+                      id="auth-otp"
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"

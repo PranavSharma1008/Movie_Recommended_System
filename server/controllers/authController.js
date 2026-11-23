@@ -132,7 +132,7 @@ export const verifyEmail = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Account verified successfully! Welcome to CinePulse.',
+      message: 'Account verified successfully! Welcome to Movie+.',
       token,
       user: {
         id: user._id,

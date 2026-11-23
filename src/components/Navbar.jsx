@@ -83,10 +83,7 @@ export const Navbar = () => {
             </div>
             <div className="flex flex-col">
               <span className="font-display font-extrabold text-xl tracking-tight text-white flex items-center">
-                Cine<span className="text-cinema-accent">Pulse</span>
-                <span className="ml-1.5 px-1.5 py-0.2 text-[9px] font-bold tracking-wider rounded bg-cinema-800 text-cinema-cyan border border-cinema-700">
-                  AI
-                </span>
+                Movie<span className="text-cinema-accent">+</span>
               </span>
             </div>
           </Link>

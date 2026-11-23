@@ -54,14 +54,14 @@ export const verifySmtpConnection = async () => {
  * @param {'register' | 'login'} [options.type='register'] - Purpose of verification
  */
 export const sendVerificationEmail = async ({ to, name, code, type = 'register' }) => {
-  const fromName = process.env.SMTP_FROM_NAME || 'CinePulse Security';
+  const fromName = process.env.SMTP_FROM_NAME || 'Movie+ Security';
   const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'adminrecallc@gmail.com';
 
   const isRegistration = type === 'register';
   const actionTitle = isRegistration ? 'Complete Your Account Registration' : 'Verify Your Identity';
   const actionSubtitle = isRegistration
-    ? 'To ensure user privacy and verify your account authenticity, enter the 6-digit code below to activate your CinePulse profile.'
-    : 'A sign-in attempt was detected for your CinePulse account. Use this security code to verify your identity.';
+    ? 'To ensure user privacy and verify your account authenticity, enter the 6-digit code below to activate your Movie+ profile.'
+    : 'A sign-in attempt was detected for your Movie+ account. Use this security code to verify your identity.';
 
   const html = `
 <!DOCTYPE html>
@@ -69,7 +69,7 @@ export const sendVerificationEmail = async ({ to, name, code, type = 'register' 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CinePulse Verification Code</title>
+  <title>Movie+ Verification Code</title>
   <style>
     body {
       margin: 0;
@@ -190,7 +190,7 @@ export const sendVerificationEmail = async ({ to, name, code, type = 'register' 
   <div class="wrapper">
     <div class="main-card">
       <div class="header">
-        <h1 class="brand-title">🎬 CinePulse AI</h1>
+        <h1 class="brand-title">🎬 Movie+</h1>
         <p class="brand-subtitle">High-Accuracy Movie Recommendation System</p>
       </div>
 
@@ -207,7 +207,7 @@ export const sendVerificationEmail = async ({ to, name, code, type = 'register' 
         </div>
 
         <div class="expiry-notice">
-          ⏱️ <strong>Security Notice:</strong> This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. CinePulse staff will never ask for your verification code.
+          ⏱️ <strong>Security Notice:</strong> This code is valid for <strong>10 minutes</strong>. Never share this code with anyone. Movie+ staff will never ask for your verification code.
         </div>
 
         <p class="message" style="margin-bottom: 0; font-size: 12px; color: #64748b;">
@@ -216,7 +216,7 @@ export const sendVerificationEmail = async ({ to, name, code, type = 'register' 
       </div>
 
       <div class="footer">
-        <p style="margin: 0 0 6px 0;"><strong>CinePulse Recommendation Engine & Identity Guard</strong></p>
+        <p style="margin: 0 0 6px 0;"><strong>Movie+ Recommendation Engine & Identity Guard</strong></p>
         <p style="margin: 0;">Automated notification sent via Gmail SMTP secure relay (${fromEmail}).</p>
       </div>
     </div>
@@ -226,7 +226,7 @@ export const sendVerificationEmail = async ({ to, name, code, type = 'register' 
   `.trim();
 
   const text = `
-🎬 CinePulse AI — ${actionTitle}
+🎬 Movie+ — ${actionTitle}
 Hello ${name || 'User'},
 
 Your one-time verification code is: ${code}
@@ -234,13 +234,13 @@ Your one-time verification code is: ${code}
 This code expires in 10 minutes.
 If you did not request this verification code, please ignore this email.
 
-— CinePulse AI Security System
+— Movie+ Security System
   `.trim();
 
   const mailOptions = {
     from: `"${fromName}" <${fromEmail}>`,
     to,
-    subject: `🔐 CinePulse Security Code: ${code}`,
+    subject: `🔐 Movie+ Security Code: ${code}`,
     text,
     html
   };

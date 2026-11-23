@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }) => {
         });
       }
       setIsAuthenticated(true);
-      showToast('Account verified and created successfully! Welcome to CinePulse.', 'success');
+      showToast('Account verified and created successfully! Welcome to Movie+.', 'success');
       return { success: true };
     } catch (err) {
       const errMsg = err.message || 'Verification failed';

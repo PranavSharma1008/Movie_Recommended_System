@@ -49,7 +49,12 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 md:pt-24 px-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative w-full max-w-2xl bg-cinema-850 border border-cinema-700/80 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[80vh]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Global movie search dialog"
+        className="relative w-full max-w-2xl bg-cinema-850 border border-cinema-700/80 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[80vh]"
+      >
         {/* Search Input Bar */}
         <div className="relative flex items-center px-4 py-3.5 border-b border-cinema-700/60 bg-cinema-900">
           <Search className="w-5 h-5 text-slate-400 mr-3 shrink-0" />
@@ -65,6 +70,7 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
             <button
               onClick={() => setQuery('')}
               className="p-1 rounded-md text-slate-400 hover:text-white"
+              aria-label="Clear search input"
             >
               <X className="w-4 h-4" />
             </button>

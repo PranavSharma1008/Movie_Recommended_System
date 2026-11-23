@@ -64,7 +64,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'online',
-    service: 'CinePulse Recommendation API & Express REST Server',
+    service: 'Movie+ Recommendation API & Express REST Server',
     knnEngineTrained: globalKNNRecommender.isTrained,
     emailVerificationEnabled: true,
     timestamp: new Date().toISOString()
@@ -81,6 +81,15 @@ app.use('/api/upload', uploadRoutes);
 // 7. Error Handling Middleware
 app.use(notFound);
 app.use(errorHandler);
+
+// 8. Process Crash Protection & Resilience Listeners
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason?.stack || reason}`);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error(`Uncaught Exception: ${error?.stack || error?.message}`);
+});
 
 const PORT = process.env.PORT || 5001;
 
@@ -114,7 +123,7 @@ const startServer = async () => {
   }
 
   app.listen(PORT, () => {
-    logger.info(`CinePulse Backend Server running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
+    logger.info(`Movie+ Backend Server running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
   });
 };
 

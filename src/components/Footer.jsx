@@ -14,7 +14,7 @@ export const Footer = () => {
                 <Film className="w-4 h-4" />
               </div>
               <span className="font-display font-extrabold text-lg text-white">
-                Cine<span className="text-cinema-accent">Pulse</span>
+                Movie<span className="text-cinema-accent">+</span>
               </span>
             </div>
 
@@ -93,7 +93,7 @@ export const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-cinema-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
-          <p>© 2026 CinePulse Recommendation System. All rights reserved.</p>
+          <p>© 2026 Movie+ Recommendation System. All rights reserved.</p>
           <div className="flex items-center gap-2">
             <span>Powered by TMDB</span>
             <span>•</span>

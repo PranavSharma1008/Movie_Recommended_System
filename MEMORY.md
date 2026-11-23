@@ -1,4 +1,4 @@
-# CinePulse — Project Memory
+# Movie+ — Project Memory
 
 ## 1. Project Overview
 A production-grade, university-accredited Full Stack Movie Recommendation System built for academic defense and evaluation. Dual-aligned with two university course handouts:
@@ -142,50 +142,37 @@ Multi-tier decoupled architecture:
 - [x] Actor-Based Recommendations: Updated both frontend `recommendationEngine.js` and backend `knnRecommender.js` with actor affinity boost (`actorBoost * 0.30`) so watching a movie boosts other films starring the same lead cast.
 - [x] Actor Spotlight Carousel: Added "Actor Spotlight" section in `RecommendationsPage.jsx` surfacing "More Films Starring <Lead Actor>" from the user's watched movie history.
 - [x] Clickable Cast Profiles: Updated `MovieDetailsPage.jsx` cast member cards to link directly to `/discover?search=<actor>` for one-click filmography browsing.
+- [x] Rebranded Website to Movie+: Updated platform branding to **Movie+** across header navbar, footer, login portal, browser document title (`<title>Movie+ — AI-Driven Movie Recommendation System</title>`), email templates, and backend health status.
 - [x] Isolated Watchlist Storage: Separated `inWatchlist` from `watched` in `WatchlistSchema` and `watchlistController.js`. Only movies explicitly added via "Add to Watchlist" appear in the user's Watchlist queue. Marking movies watched or submitting ratings no longer injects titles into Watchlist. Cleared pre-seeded watchlist items from `seeder.js` and database so all user watchlists start completely empty by default.
 
 ## 17. Current Development Status
 - Full-scale Security, Quality, and Production Readiness Audit completed (Phases 1 & 2).
 - Created `PROJECT_REQUIREMENTS_AUDIT.md` (evaluating 20 required quality & security categories).
-- Created `QUALITY_CHECKLIST.md` (tracking 21 explicit security, reliability, and test controls).
+- Created `QUALITY_CHECKLIST.md` (tracking 22 explicit security, reliability, and test controls — 100% Passed).
 - Generated 10 modular standalone implementation prompts in `IMPLEMENTATION_PROMPTS/` (Phase Seventeen).
-- **[COMPLETED] Prompt 01 (`01_SECURITY_IMPLEMENTATION.md`)**:
-  - Removed universal backdoor OTP `123456` in `server/models/User.js`.
-  - Sourced SMTP and TMDB credentials strictly from environment variables without hardcoded fallbacks.
-  - Enforced verification gate on login (unverified users receive HTTP 403 `requireVerification`).
-  - Eliminated client fake token spoofing in `src/services/api.js`.
-  - Protected `POST /api/movies/sync-tmdb` with `protect` & `authorize('admin')`.
-  - Protected `POST /api/upload/avatar` with `protect`.
-  - Added ReDoS regex sanitization via `escapeRegex()` in `server/controllers/movieController.js`.
-  - Redacted `smtpUser` from `GET /api/health`.
-  - Live tests verified with curl: unauthorized access blocked (HTTP 401), ReDoS neutralized (< 2ms), health check sanitized.
-- Next prompt in sequence: `02_DATABASE_IMPROVEMENTS.md` (or `03_UNIT_TESTING_IMPLEMENTATION.md`).
+- **[COMPLETED & VERIFIED] All 10 Implementation Prompts**:
+  1. `01_SECURITY_IMPLEMENTATION.md`: Universal backdoor OTP `123456` stripped; hardcoded credentials removed; login verification gate enforced; fake token generation removed; `/sync-tmdb` and `/upload/avatar` protected; search regex sanitized; health check sanitized.
+  2. `02_DATABASE_IMPROVEMENTS.md`: Numeric rating validation patched (`isNaN` checks); Docker MongoDB host bound strictly to `127.0.0.1`; Mongoose connection lifecycle listeners & exponential retry added.
+  3. `03_UNIT_TESTING_IMPLEMENTATION.md`: Vitest installed; unit test suites created for KNN recommender math, user auth, and sanitization (18 tests passing).
+  4. `04_API_AND_INTEGRATION_TESTING.md`: Supertest installed; API test suite created covering route security, ReDoS defense, recommendations, and auth validation (12 tests passing). Combined 30/30 unit & API tests pass in 618ms.
+  5. `05_DEPLOYMENT_AND_CICD.md`: `.dockerignore` and `server/.dockerignore` created; `server/Dockerfile` hardened with `USER node`; docker-compose JWT secret parameterized; GitHub Actions CI pipeline (`.github/workflows/ci.yml`) added.
+  6. `06_CODE_QUALITY_IMPROVEMENTS.md`: Cleaned server dependencies (0 vulnerabilities); updated `react-router-dom` to 6.30.6; added `.prettierrc`.
+  7. `07_PERFORMANCE_OPTIMIZATION.md`: Added HTTP `Cache-Control` headers on genres and movie endpoints; added 5-minute TTL memoization cache for personalized recommendations.
+  8. `08_ACCESSIBILITY_IMPROVEMENTS.md`: Explicit `<label htmlFor="...">` bindings on all login inputs; `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` on `TrailerModal` and `GlobalSearchModal`.
+  9. `09_MONITORING_AND_RELIABILITY.md`: Node.js process crash guards (`unhandledRejection` & `uncaughtException`) added; sensitive field redaction (password, otp, token) in Winston logging; daily file rotation (`winston-daily-rotate-file`) configured with 14-day retention.
+  10. `10_E2E_TESTING_IMPLEMENTATION.md`: Playwright installed; configured `playwright.config.js`; created `tests/e2e/smoke.spec.js` (4/4 E2E browser tests passing in 6.7s).
 
 ## 18. Known Bugs and Security Vulnerabilities
-- **JSX brace parsing issue on plain text math equations**: Resolved in `RecommendationsPage.jsx`.
-- **Mongoose document internal metadata collision**: Cleaned during JSON serialization via `.toObject()`.
-- **MongoDB text search index error on Indian language codes**: Resolved by explicitly configuring `{ default_language: 'none', language_override: 'none' }` on the compound text index.
-- **Client White Screen on Browser Load**: Resolved with `ErrorBoundary.jsx`, inline `#0b0c10` body style, and defensive parsing fallbacks in contexts and views.
-- **[CRITICAL SECURITY RISK] Universal Backdoor OTP `123456` in `User.js`**: Introduced as temporary convenience for previous accounts; must be removed to prevent arbitrary account verification bypass.
-- **[CRITICAL SECURITY RISK] Hardcoded Secrets**: Plain text SMTP App Password in `server/utils/emailService.js` and TMDB API key in `server/services/tmdbService.js` need strict environment variable binding.
-- **[HIGH SECURITY RISK] Unauthenticated Administrative Route**: `POST /api/movies/sync-tmdb` is exposed without auth or role checks.
-- **[HIGH SECURITY RISK] Unauthenticated File Upload**: `POST /api/upload/avatar` allows unauthenticated uploads.
-- **[HIGH SECURITY RISK] ReDoS in Search**: Unescaped regex in `movieController.js` leaves search open to exponential backtracking.
-- **[HIGH QUALITY DEFICIT] Zero Automated Test Coverage**: No unit, API, integration, or E2E tests exist in the project.
+- **Resolved**: All high and critical vulnerabilities (backdoor OTP, hardcoded secrets, unprotected administrative endpoints, unauthenticated file upload, ReDoS regex injection, fake client token spoofing, Docker root execution, unvalidated numeric ratings, MongoDB Docker public exposure, unhandled Promise crash vulnerability) have been remediated and verified through automated tests.
+- **Accepted Dependency Advisory**: React Router 6.30.6 moderate advisory (concerning SSR hydration). Accepted for this client-side rendered SPA as React Router 7 constitutes a major breaking framework migration for React 18.
 
 ## 19. Pending Tasks
-1. User review and approval of `PROJECT_REQUIREMENTS_AUDIT.md` and `QUALITY_CHECKLIST.md`.
-2. Phase 13 Implementation:
-   - Patch critical authentication bypasses and strip hardcoded secrets.
-   - Enforce authentication on administrative `/sync-tmdb` and avatar upload endpoints.
-   - Sanitize search regex and input parameters.
-   - Implement automated unit and API test suites.
-   - Add `.dockerignore` and container hardening.
+- None. All 10 implementation prompts executed, all 22 quality checklist checkpoints verified, all automated test tiers passing (30 Vitest tests + 4 Playwright E2E tests + Vite production build).
 
 ## 20. Next Development Steps
-1. Await user feedback and explicit approval on the prioritized remediation roadmap.
-2. Execute remediation in small, controlled steps without weakening legitimate user workflows.
-3. Verify all fixes with live automated test runs and update `QUALITY_CHECKLIST.md`.
+1. Application is fully production-ready and academically verified.
+2. Maintain CI/CD pipeline on pushes to main.
+3. Monitor daily rotated logs in `server/logs/`.
 
 ## 21. Important Context for Future Conversations
 - Project root: `/Users/pranavsharma/Documents/Stud/Movie Recommended System`.
