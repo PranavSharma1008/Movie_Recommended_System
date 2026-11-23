@@ -8,7 +8,6 @@ import {
   Star, 
   RotateCcw, 
   Edit3, 
-  Sparkles, 
   Film, 
   ShieldCheck,
   Check,
@@ -20,7 +19,7 @@ import { Link } from 'react-router-dom';
 import { MoviePoster } from '../components/MoviePoster';
 
 export const ProfilePage = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isAuthenticated } = useAuth();
   const { 
     watchlist, 
     watched, 
@@ -63,6 +62,26 @@ export const ProfilePage = () => {
     .filter(Boolean);
 
   const favoriteGenres = Array.isArray(user?.favoriteGenres) ? user.favoriteGenres : [];
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen pt-36 pb-20 px-4 max-w-md mx-auto text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-cinema-800/80 border border-cinema-700 flex items-center justify-center mx-auto text-cinema-accent shadow-xl">
+          <User className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Sign In Required</h2>
+        <p className="text-slate-400 text-sm">
+          Please sign in to access your profile, customize genre preferences, and manage your watchlist and history.
+        </p>
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-cinema-accent hover:bg-cinema-accentHover text-white text-xs font-bold shadow-md shadow-cinema-accent/30 transition-all"
+        >
+          Sign In to CinePulse
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10">
@@ -238,11 +257,11 @@ export const ProfilePage = () => {
       <section className="glass-panel p-6 sm:p-7 rounded-3xl border border-cinema-750 space-y-4">
         <div>
           <h2 className="font-display font-bold text-xl text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-cinema-cyan" />
-            Favorite Genre Preferences (Recommendation Weights)
+            <Film className="w-5 h-5 text-cinema-accent" />
+            Favorite Genre Preferences
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Click any genre to toggle it on or off. Our recommendation engine immediately re-ranks all recommendations based on your active selections.
+            Click any genre to toggle it on or off. Customize your preferred genres to personalize your movie discovery experience.
           </p>
         </div>
 

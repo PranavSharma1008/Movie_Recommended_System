@@ -10,18 +10,18 @@ export const AuthProvider = ({ children }) => {
   
   const safeParseUser = (val) => {
     try {
-      if (!val) return INITIAL_USER_PROFILE;
+      if (!val) return null;
       const parsed = JSON.parse(val);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.email) {
         return {
           ...INITIAL_USER_PROFILE,
           ...parsed,
-          favoriteGenres: Array.isArray(parsed.favoriteGenres) ? parsed.favoriteGenres : INITIAL_USER_PROFILE.favoriteGenres
+          favoriteGenres: Array.isArray(parsed.favoriteGenres) ? parsed.favoriteGenres : []
         };
       }
-      return INITIAL_USER_PROFILE;
+      return null;
     } catch {
-      return INITIAL_USER_PROFILE;
+      return null;
     }
   };
 
@@ -30,7 +30,9 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('cinepulse_auth_status') !== 'false';
+    const status = localStorage.getItem('cinepulse_auth_status');
+    const token = localStorage.getItem('cinepulse_token');
+    return status === 'true' && !!token;
   });
 
   useEffect(() => {
@@ -200,8 +202,10 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setIsAuthenticated(false);
+    setUser(null);
     localStorage.setItem('cinepulse_auth_status', 'false');
     localStorage.removeItem('cinepulse_token');
+    localStorage.removeItem('cinepulse_user');
     showToast('You have been logged out.', 'info');
   };
 

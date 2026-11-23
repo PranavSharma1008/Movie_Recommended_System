@@ -9,7 +9,6 @@ import {
   Calendar, 
   Film, 
   Play, 
-  Sparkles,
   ArrowRight,
   Filter
 } from 'lucide-react';
@@ -113,7 +112,7 @@ export const WatchlistPage = () => {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Your Watchlist is Empty</h2>
           <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto leading-relaxed">
-            You haven't added any movies to your watchlist yet. Explore our discovery catalog or AI recommendations to start building your queue!
+            You haven't added any movies to your watchlist yet. Explore our discovery catalog to start building your queue!
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -122,13 +121,6 @@ export const WatchlistPage = () => {
             >
               <Film className="w-4 h-4" />
               Discover Movies
-            </Link>
-            <Link
-              to="/recommendations"
-              className="px-6 py-2.5 rounded-xl bg-cinema-800 hover:bg-cinema-750 border border-cinema-700 text-white text-xs font-bold transition-all flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 text-cinema-cyan" />
-              Get AI Recommendations
             </Link>
           </div>
         </div>

@@ -144,13 +144,15 @@ export const MovieProvider = ({ children }) => {
     localStorage.setItem(`cinepulse_ratings_${userKey}`, JSON.stringify(userRatings || {}));
   }, [userRatings, userKey]);
 
-  // Derived user genres
-  const favoriteGenres = Array.isArray(user?.favoriteGenres) && user.favoriteGenres.length > 0
-    ? user.favoriteGenres
-    : ['Sci-Fi', 'Action', 'Thriller', 'Drama'];
+  // Derived user genres (empty by default)
+  const favoriteGenres = Array.isArray(user?.favoriteGenres) ? user.favoriteGenres : [];
 
   // Toggle Watchlist with live backend sync
   const toggleWatchlist = (movieId) => {
+    if (!isAuthenticated) {
+      showToast('Please sign in to save movies to your watchlist.', 'info');
+      return;
+    }
     const movie = (movies || []).find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
     const title = movie ? movie.title : 'Movie';
 
@@ -166,15 +168,17 @@ export const MovieProvider = ({ children }) => {
       }
     });
 
-    if (isAuthenticated) {
-      api.toggleWatchlist(movieId).catch(() => {});
-    }
+    api.toggleWatchlist(movieId).catch(() => {});
   };
 
   const isInWatchlist = (movieId) => Array.isArray(watchlist) && watchlist.includes(movieId);
 
   // Toggle Watched with live backend sync
   const toggleWatched = (movieId) => {
+    if (!isAuthenticated) {
+      showToast('Please sign in to record watched films.', 'info');
+      return;
+    }
     const movie = (movies || []).find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
     const title = movie ? movie.title : 'Movie';
 
@@ -190,15 +194,17 @@ export const MovieProvider = ({ children }) => {
       }
     });
 
-    if (isAuthenticated) {
-      api.toggleWatched(movieId).catch(() => {});
-    }
+    api.toggleWatched(movieId).catch(() => {});
   };
 
   const isWatched = (movieId) => Array.isArray(watched) && watched.includes(movieId);
 
   // Rate Movie with live backend sync
   const rateMovie = (movieId, rating) => {
+    if (!isAuthenticated) {
+      showToast('Please sign in to rate movies.', 'info');
+      return;
+    }
     const movie = movies.find((m) => String(m.id) === String(movieId) || String(m.tmdbId) === String(movieId));
     const title = movie ? movie.title : 'Movie';
 
@@ -212,30 +218,32 @@ export const MovieProvider = ({ children }) => {
       setWatched((prev) => [...prev, movieId]);
     }
 
-    showToast(`Rated "${title}" ${rating}★! Recommendation weights recalibrated.`, 'success');
-
-    if (isAuthenticated) {
-      api.submitRating(movieId, rating).catch(() => {});
-    }
+    showToast(`Rated "${title}" ${rating}★!`, 'success');
+    api.submitRating(movieId, rating).catch(() => {});
   };
 
   // Toggle Favorite Genre in Profile
   const toggleFavoriteGenre = (genre) => {
+    if (!isAuthenticated) {
+      showToast('Please sign in to save your favorite genres.', 'info');
+      return;
+    }
     if (genre === 'All') return;
     const current = [...favoriteGenres];
     const index = current.indexOf(genre);
     let updated;
     if (index > -1) {
-      if (current.length <= 1) {
-        showToast('You must keep at least one favorite genre.', 'error');
-        return;
-      }
       updated = current.filter((g) => g !== genre);
     } else {
       updated = [...current, genre];
     }
     updateProfile({ favoriteGenres: updated });
-    showToast(`Preferences updated: ${updated.join(', ')}`, 'info');
+    showToast(
+      updated.length > 0 
+        ? `Preferences updated: ${updated.join(', ')}` 
+        : 'All genre preferences cleared.', 
+      'info'
+    );
   };
 
   // Trailer Modal controls

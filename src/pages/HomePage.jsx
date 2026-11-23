@@ -28,9 +28,11 @@ export const HomePage = () => {
           <MovieCarousel
             title="Recommended For You"
             subtitle={
-              (watched || []).length > 0
-                ? `AI-tailored matches based on your favorite genres (${(favoriteGenres || []).slice(0, 3).join(', ')}) & watch history`
-                : `AI-tailored matches based on your favorite genres (${(favoriteGenres || []).slice(0, 3).join(', ')})`
+              (favoriteGenres || []).length > 0
+                ? (watched || []).length > 0
+                  ? `AI-tailored matches based on your favorite genres (${(favoriteGenres || []).slice(0, 3).join(', ')}) & watch history`
+                  : `AI-tailored matches based on your favorite genres (${(favoriteGenres || []).slice(0, 3).join(', ')})`
+                : 'Top-rated films and curated cinematic selections for your profile'
             }
             movies={(personalizedRecommendations || []).slice(0, 10)}
             viewAllLink="/recommendations"

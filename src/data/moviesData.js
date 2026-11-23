@@ -3,11 +3,11 @@
  * Total Movies: 58 (Curated Indian & Global Masterpieces)
  */
 export const INITIAL_USER_PROFILE = {
-  name: "Alex Vance",
-  email: "alex.vance@cinema.edu",
+  name: "",
+  email: "",
   role: "user",
-  avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-  favoriteGenres: ["Sci-Fi", "Action", "Drama", "Indian Cinema"]
+  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+  favoriteGenres: []
 };
 
 export const ALL_GENRES = [
