@@ -183,7 +183,7 @@ Multi-tier decoupled architecture:
 3. Monitor daily rotated logs in `server/logs/`.
 
 ## 21. Important Context for Future Conversations
-- Project root: `/Users/pranavsharma/Documents/Projects /Pending /Movie Recommended System`.
+- Project root: `/Users/pranavsharma/Documents/Stud/Movie Recommended System`.
 - Backend runs on port `5001`; Frontend runs on port `5173`.
 - GitHub repository: `https://github.com/PranavSharma1008/Movie_Recommended_System.git` (main branch).
 - Global memory rule: Always inspect and maintain `MEMORY.md`, `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `DEVELOPMENT_LOG.md`, and `TASK_TRACKER.md`.
