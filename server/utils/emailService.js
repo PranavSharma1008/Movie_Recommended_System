@@ -1,11 +1,22 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from '../config/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+let cachedTransporter = null;
 
 /**
  * Creates and configures the Nodemailer SMTP Transporter
  * Sourced securely from environment variables (process.env)
  */
-const createTransporter = () => {
+export const getTransporter = () => {
+  if (cachedTransporter) return cachedTransporter;
+
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : undefined;
 
@@ -14,7 +25,7 @@ const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport({
+  cachedTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '465', 10),
     secure: process.env.SMTP_SECURE === 'false' ? false : true,
@@ -23,14 +34,15 @@ const createTransporter = () => {
       pass
     }
   });
-};
 
-const transporter = createTransporter();
+  return cachedTransporter;
+};
 
 /**
  * Verify SMTP connection on startup or demand
  */
 export const verifySmtpConnection = async () => {
+  const transporter = getTransporter();
   if (!transporter) {
     logger.warn('SMTP service skipped: SMTP_USER or SMTP_PASS not configured in environment.');
     return false;
@@ -245,6 +257,7 @@ If you did not request this verification code, please ignore this email.
     html
   };
 
+  const transporter = getTransporter();
   if (!transporter) {
     logger.warn(`Skipping verification email to ${to}: SMTP transporter not configured.`);
     return { success: false, message: 'SMTP not configured' };
