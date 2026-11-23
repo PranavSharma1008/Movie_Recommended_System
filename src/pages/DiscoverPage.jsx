@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
 import { SearchBar } from '../components/SearchBar';
+import { matchMovieSearch } from '../utils/searchHelper';
 import { GenreFilter } from '../components/GenreFilter';
 import { MovieGrid } from '../components/MovieGrid';
 
@@ -22,8 +23,9 @@ export const DiscoverPage = () => {
   // Initial values from URL params if present
   const initialGenre = searchParams.get('genre') || 'All';
   const initialSort = searchParams.get('sort') || 'popularity';
+  const initialSearch = searchParams.get('search') || '';
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedGenre, setSelectedGenre] = useState(initialGenre);
   const [minRating, setMinRating] = useState('0'); // 0, 7.5, 8.0, 8.5
   const [sortBy, setSortBy] = useState(initialSort); // 'popularity', 'rating', 'year', 'title'
@@ -38,6 +40,10 @@ export const DiscoverPage = () => {
     const sortParam = searchParams.get('sort');
     if (sortParam) {
       setSortBy(sortParam);
+    }
+    const searchParam = searchParams.get('search');
+    if (searchParam !== null && searchParam !== undefined) {
+      setSearchQuery(searchParam);
     }
   }, [searchParams, allGenres]);
 
@@ -63,16 +69,9 @@ export const DiscoverPage = () => {
   const filteredMovies = useMemo(() => {
     return movies
       .filter((movie) => {
-        // Search filter
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchTitle = movie.title.toLowerCase().includes(q);
-          const matchDirector = movie.director.toLowerCase().includes(q);
-          const matchGenres = movie.genres.some((g) => g.toLowerCase().includes(q));
-          const matchCast = movie.cast.some((c) => c.name.toLowerCase().includes(q));
-          if (!matchTitle && !matchDirector && !matchGenres && !matchCast) {
-            return false;
-          }
+        // Intelligent Actor & Movie Search Filter
+        if (searchQuery.trim() && !matchMovieSearch(movie, searchQuery)) {
+          return false;
         }
 
         // Genre filter

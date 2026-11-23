@@ -13,6 +13,7 @@ import { MovieCarousel } from '../components/MovieCarousel';
 
 export const RecommendationsPage = () => {
   const {
+    movies,
     personalizedRecommendations,
     lastWatchedMovie,
     becauseYouWatchedRecommendations,
@@ -28,6 +29,28 @@ export const RecommendationsPage = () => {
   const safeWatched = watched || [];
   const safeRatings = userRatings || {};
   const safeFavGenres = favoriteGenres || [];
+
+  // Dynamic Actor Spotlight: Find other films starring the lead actors of the last watched movie
+  const actorSpotlight = React.useMemo(() => {
+    if (!lastWatchedMovie?.cast?.length || !movies?.length) return null;
+    const leadActors = lastWatchedMovie.cast.slice(0, 3).map((c) => c.name).filter(Boolean);
+    for (const actor of leadActors) {
+      const actorLower = actor.toLowerCase().trim();
+      const films = movies.filter(
+        (m) =>
+          String(m.id) !== String(lastWatchedMovie.id) &&
+          String(m.tmdbId) !== String(lastWatchedMovie.tmdbId) &&
+          (m.cast || []).some((c) => (c.name || '').toLowerCase().trim() === actorLower)
+      );
+      if (films.length > 0) {
+        return {
+          actor,
+          films
+        };
+      }
+    }
+    return null;
+  }, [lastWatchedMovie, movies]);
 
   return (
     <div className="min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
@@ -149,6 +172,37 @@ export const RecommendationsPage = () => {
                 showMatchScore={true}
                 matchScore={movie.matchPercentage}
                 matchReason={movie.matchReason}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Section 2.5: Actor Spotlight */}
+      {actorSpotlight && actorSpotlight.films.length > 0 && (
+        <section className="space-y-5 pt-6 border-t border-cinema-800/80">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                Actor Spotlight
+              </span>
+              <h2 className="font-display font-bold text-2xl text-white">
+                More Films Starring {actorSpotlight.actor}
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Because you watched {lastWatchedMovie?.title} starring {actorSpotlight.actor}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {actorSpotlight.films.slice(0, 6).map((movie) => (
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                showMatchScore={true}
+                matchScore={94}
+                matchReason={`Stars ${actorSpotlight.actor}`}
               />
             ))}
           </div>

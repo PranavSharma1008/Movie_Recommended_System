@@ -3,6 +3,7 @@ import { Search, X, Star, Calendar, ArrowRight, Film } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovies } from '../context/MovieContext';
 import { MoviePoster } from './MoviePoster';
+import { matchMovieSearch, getMovieMatchHighlight } from '../utils/searchHelper';
 
 export const GlobalSearchModal = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
@@ -36,13 +37,7 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const filteredMovies = query.trim()
-    ? (movies || []).filter(
-        (m) =>
-          (m.title || '').toLowerCase().includes(query.toLowerCase()) ||
-          (m.genres || []).some((g) => (g || '').toLowerCase().includes(query.toLowerCase())) ||
-          (m.director || '').toLowerCase().includes(query.toLowerCase()) ||
-          (m.cast || []).some((c) => (c?.name || '').toLowerCase().includes(query.toLowerCase()))
-      )
+    ? (movies || []).filter((m) => matchMovieSearch(m, query))
     : (movies || []).slice(0, 6);
 
   const handleSelectMovie = (id) => {
@@ -91,45 +86,57 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
             <div className="py-12 text-center text-slate-400">
               <Film className="w-10 h-10 mx-auto text-slate-600 mb-2" />
               <p className="text-white font-medium">No movies found matching "{query}"</p>
-              <p className="text-xs text-slate-400 mt-1">Try searching for "Nolan", "Sci-Fi", or "Dune"</p>
+              <p className="text-xs text-slate-400 mt-1">Try searching for an actor like "Shah Rukh Khan", "Aamir", or a genre</p>
             </div>
           ) : (
-            filteredMovies.map((movie) => (
-              <div
-                key={movie.id}
-                onClick={() => handleSelectMovie(movie.id)}
-                className="group flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-cinema-750/70 cursor-pointer transition-all border border-transparent hover:border-cinema-600/50"
-              >
-                <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 shadow-md">
-                  <MoviePoster
-                    src={movie.poster}
-                    alt={movie.title}
-                    title={movie.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+            filteredMovies.map((movie) => {
+              const highlight = getMovieMatchHighlight(movie, query);
+              const leadCast = (movie.cast || []).slice(0, 3).map((c) => c.name).join(', ');
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-white group-hover:text-cinema-cyan transition-colors truncate">
-                      {movie.title}
-                    </h4>
-                    <span className="text-xs text-slate-400 flex items-center gap-1 shrink-0">
-                      <Star className="w-3 h-3 text-cinema-gold fill-cinema-gold" />
-                      {movie.rating}
-                    </span>
+              return (
+                <div
+                  key={movie.id}
+                  onClick={() => handleSelectMovie(movie.id)}
+                  className="group flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-cinema-750/70 cursor-pointer transition-all border border-transparent hover:border-cinema-600/50"
+                >
+                  <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 shadow-md">
+                    <MoviePoster
+                      src={movie.poster}
+                      alt={movie.title}
+                      title={movie.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <p className="text-xs text-slate-400 truncate mt-0.5">
-                    {movie.year} • {movie.genres.slice(0, 3).join(', ')} • Dir: {movie.director}
-                  </p>
-                  <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
-                    {movie.description}
-                  </p>
-                </div>
 
-                <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cinema-cyan group-hover:translate-x-1 transition-all shrink-0 mr-1" />
-              </div>
-            ))
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-semibold text-white group-hover:text-cinema-cyan transition-colors truncate">
+                        {movie.title}
+                      </h4>
+                      <span className="text-xs text-slate-400 flex items-center gap-1 shrink-0">
+                        <Star className="w-3 h-3 text-cinema-gold fill-cinema-gold" />
+                        {movie.rating}
+                      </span>
+                      {highlight && (
+                        <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-cinema-800 text-cinema-cyan border border-cinema-700/80">
+                          {highlight}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-300 truncate mt-0.5">
+                      {movie.year} • {movie.genres.slice(0, 3).join(', ')} • Dir: {movie.director}
+                    </p>
+                    {leadCast && (
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        <strong className="text-slate-300">Cast:</strong> {leadCast}
+                      </p>
+                    )}
+                  </div>
+
+                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-cinema-cyan group-hover:translate-x-1 transition-all shrink-0 mr-1" />
+                </div>
+              );
+            })
           )}
         </div>
       </div>

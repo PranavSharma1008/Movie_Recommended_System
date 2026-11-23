@@ -300,11 +300,24 @@ export class ContentBasedKNNRecommender {
 
       const bayesianQuality = ((movie.rating || 7.5) / 10.0);
 
-      // Score heavily prioritized on content similarity to watched movie
-      const finalScore = (maxWatchedSim * 0.55) + (cosSim * 0.30) + (genreAffinity * 0.10) + (bayesianQuality * 0.05);
+      // Actor Affinity Match (boost movies sharing lead cast with watched movies)
+      let sharedActorName = null;
+      if (lastWatchedMovie) {
+        const shared = (movie.cast || []).find((c) =>
+          (lastWatchedMovie.cast || []).some(
+            (wc) => (wc.name || '').toLowerCase().trim() === (c.name || '').toLowerCase().trim()
+          )
+        );
+        if (shared) sharedActorName = shared.name;
+      }
+
+      const actorBoost = sharedActorName ? 0.35 : 0.0;
+      const finalScore = (maxWatchedSim * 0.45) + (actorBoost * 0.30) + (cosSim * 0.15) + (genreAffinity * 0.05) + (bayesianQuality * 0.05);
 
       const reasons = [];
-      if (mostSimilarTitle && maxWatchedSim > 0.12) {
+      if (sharedActorName) {
+        reasons.push(`Also stars ${sharedActorName} (from "${lastWatchedMovie?.title}")`);
+      } else if (mostSimilarTitle && maxWatchedSim > 0.12) {
         reasons.push(`Because you watched "${mostSimilarTitle}"`);
       } else if (matchingFavGenres.length) {
         reasons.push(`Aligned with ${matchingFavGenres[0]} preferences`);

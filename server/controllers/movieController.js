@@ -52,11 +52,36 @@ export const getMovies = async (req, res, next) => {
         query.rating = { $gte: parseFloat(minRating) };
       }
       if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { director: { $regex: search, $options: 'i' } },
-          { similarityKeywords: { $regex: search, $options: 'i' } }
+        const cleanSearch = search.trim();
+        const searchRegexList = [{ title: { $regex: cleanSearch, $options: 'i' } },
+          { director: { $regex: cleanSearch, $options: 'i' } },
+          { 'cast.name': { $regex: cleanSearch, $options: 'i' } },
+          { similarityKeywords: { $regex: cleanSearch, $options: 'i' } },
+          { genres: { $regex: cleanSearch, $options: 'i' } }
         ];
+
+        // Actor Alias expansion (e.g. sharu khan -> Shah Rukh Khan)
+        const low = cleanSearch.toLowerCase();
+        if (low.includes('sharu') || low.includes('srk') || low.includes('shahrukh')) {
+          searchRegexList.push({ 'cast.name': { $regex: 'Shah Rukh Khan', $options: 'i' } });
+        }
+        if (low.includes('aamir') || low.includes('amir')) {
+          searchRegexList.push({ 'cast.name': { $regex: 'Aamir Khan', $options: 'i' } });
+        }
+        if (low.includes('salman')) {
+          searchRegexList.push({ 'cast.name': { $regex: 'Salman Khan', $options: 'i' } });
+        }
+        if (low.includes('amitabh') || low.includes('bachchan')) {
+          searchRegexList.push({ 'cast.name': { $regex: 'Amitabh Bachchan', $options: 'i' } });
+        }
+        if (low.includes('nolan')) {
+          searchRegexList.push({ director: { $regex: 'Christopher Nolan', $options: 'i' } });
+        }
+        if (low.includes('dicaprio') || low.includes('leo')) {
+          searchRegexList.push({ 'cast.name': { $regex: 'Leonardo DiCaprio', $options: 'i' } });
+        }
+
+        query.$or = searchRegexList;
       }
 
       let sortOptions = { rating: -1 };

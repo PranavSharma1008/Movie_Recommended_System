@@ -136,29 +136,44 @@ Multi-tier decoupled architecture:
 - [x] Cleaned profile storage defaults (favoriteGenres initialized to empty array `[]`)
 - [x] New User Random Recommendations: When a new user logs in (0 watched movies), recommendation feed returns randomized discovery selections across the entire catalog
 - [x] Content-Based Watched Trigger: As soon as a user marks 1 or more movies as watched, recommendations immediately calculate and rank nearest neighbors based on the watched movie's TF-IDF content-similarity vectors
+- [x] Commercial Minimalist Footer: Completely removed academic evaluator labels, "99.1% Precision@K", "LocalStorage State", and academic badges for same-day client delivery. Kept modern brand info, quick navigation links, popular genres, and TMDB credit note.
+- [x] Actor-Based Search & Alias Resolution: Created `src/utils/searchHelper.js` with comprehensive phonetic and alias mapping (e.g. "sharu khan", "srk" -> "Shah Rukh Khan", "aamir" -> "Aamir Khan", "prabhas", "amitabh", etc.), multi-token matching, and cast highlights in `GlobalSearchModal.jsx` and `DiscoverPage.jsx`.
+- [x] Backend Actor Search & Alias Expansion: Updated `server/controllers/movieController.js` to search across `cast.name` and expand popular actor nicknames into MongoDB regex queries.
+- [x] Actor-Based Recommendations: Updated both frontend `recommendationEngine.js` and backend `knnRecommender.js` with actor affinity boost (`actorBoost * 0.30`) so watching a movie boosts other films starring the same lead cast.
+- [x] Actor Spotlight Carousel: Added "Actor Spotlight" section in `RecommendationsPage.jsx` surfacing "More Films Starring <Lead Actor>" from the user's watched movie history.
+- [x] Clickable Cast Profiles: Updated `MovieDetailsPage.jsx` cast member cards to link directly to `/discover?search=<actor>` for one-click filmography browsing.
 
 ## 17. Current Development Status
-- Memory and project tracking system initialized.
-- Core full-stack application and machine learning engine operational and verified.
-- Awaiting user's complete project description and next-phase specifications.
+- Full-scale Security, Quality, and Production Readiness Audit completed (Phases 1 & 2).
+- Created `PROJECT_REQUIREMENTS_AUDIT.md` (evaluating 20 required quality & security categories).
+- Created `QUALITY_CHECKLIST.md` (tracking 21 explicit security, reliability, and test controls).
+- Awaiting user review and authorization before implementing Phase 13 remediation fixes.
 
-## 18. Known Bugs and Solutions
+## 18. Known Bugs and Security Vulnerabilities
 - **JSX brace parsing issue on plain text math equations**: Resolved in `RecommendationsPage.jsx`.
 - **Mongoose document internal metadata collision**: Cleaned during JSON serialization via `.toObject()`.
 - **MongoDB text search index error on Indian language codes**: Resolved by explicitly configuring `{ default_language: 'none', language_override: 'none' }` on the compound text index.
-- **Client White Screen on Browser Load**: Unchecked `localStorage` parsing could return `null` or corrupted entries, throwing uncaught TypeErrors. Resolved with `ErrorBoundary.jsx`, inline `#0b0c10` body style, and defensive parsing fallbacks in contexts and views.
-- **Previous Account Login Issue**: Accounts created previously with matching passwords could be blocked if unverified or if local token was unsynchronized. Resolved by auto-verifying on valid password match, supporting OTP verification fallback '123456', trimming email input, and ensuring synchronous token/user session persistence across AuthContext and API service.
+- **Client White Screen on Browser Load**: Resolved with `ErrorBoundary.jsx`, inline `#0b0c10` body style, and defensive parsing fallbacks in contexts and views.
+- **[CRITICAL SECURITY RISK] Universal Backdoor OTP `123456` in `User.js`**: Introduced as temporary convenience for previous accounts; must be removed to prevent arbitrary account verification bypass.
+- **[CRITICAL SECURITY RISK] Hardcoded Secrets**: Plain text SMTP App Password in `server/utils/emailService.js` and TMDB API key in `server/services/tmdbService.js` need strict environment variable binding.
+- **[HIGH SECURITY RISK] Unauthenticated Administrative Route**: `POST /api/movies/sync-tmdb` is exposed without auth or role checks.
+- **[HIGH SECURITY RISK] Unauthenticated File Upload**: `POST /api/upload/avatar` allows unauthenticated uploads.
+- **[HIGH SECURITY RISK] ReDoS in Search**: Unescaped regex in `movieController.js` leaves search open to exponential backtracking.
+- **[HIGH QUALITY DEFICIT] Zero Automated Test Coverage**: No unit, API, integration, or E2E tests exist in the project.
 
 ## 19. Pending Tasks
-- Await complete user project description and new feature requests.
-- Ingest and verify all requirements in `PROJECT_SPEC.md` and `MEMORY.md`.
-- Formulate architecture proposal and implementation roadmap for upcoming requirements.
+1. User review and approval of `PROJECT_REQUIREMENTS_AUDIT.md` and `QUALITY_CHECKLIST.md`.
+2. Phase 13 Implementation:
+   - Patch critical authentication bypasses and strip hardcoded secrets.
+   - Enforce authentication on administrative `/sync-tmdb` and avatar upload endpoints.
+   - Sanitize search regex and input parameters.
+   - Implement automated unit and API test suites.
+   - Add `.dockerignore` and container hardening.
 
 ## 20. Next Development Steps
-1. Ingest user project specification upon submission.
-2. Cross-reference new requirements against existing system architecture.
-3. Present detailed feature-wise implementation plan and await user approval.
-4. Execute approved implementation tasks.
+1. Await user feedback and explicit approval on the prioritized remediation roadmap.
+2. Execute remediation in small, controlled steps without weakening legitimate user workflows.
+3. Verify all fixes with live automated test runs and update `QUALITY_CHECKLIST.md`.
 
 ## 21. Important Context for Future Conversations
 - Project root: `/Users/pranavsharma/Documents/Stud/Movie Recommended System`.

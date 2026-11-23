@@ -308,20 +308,24 @@ export const MovieDetailsPage = () => {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {movie.cast.map((actor, idx) => (
-                    <div
+                    <Link
                       key={idx}
-                      className="flex items-center gap-3 p-2.5 rounded-xl bg-cinema-850/60 border border-cinema-750"
+                      to={`/discover?search=${encodeURIComponent(actor.name)}`}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-cinema-850/60 border border-cinema-750 hover:border-cinema-cyan/50 hover:bg-cinema-800/80 transition-all group"
+                      title={`Find movies starring ${actor.name}`}
                     >
                       <img
                         src={actor.avatar}
                         alt={actor.name}
-                        className="w-10 h-10 rounded-full object-cover shrink-0 ring-1 ring-cinema-700"
+                        className="w-10 h-10 rounded-full object-cover shrink-0 ring-1 ring-cinema-700 group-hover:ring-cinema-cyan transition-all"
                       />
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate">{actor.name}</p>
+                        <p className="text-xs font-bold text-white group-hover:text-cinema-cyan transition-colors truncate">
+                          {actor.name}
+                        </p>
                         <p className="text-[11px] text-slate-400 truncate">{actor.role}</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
