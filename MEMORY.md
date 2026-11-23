@@ -71,6 +71,7 @@ A production-grade, university-accredited Full Stack Movie Recommendation System
 - [x] Added "Indian Cinema & Blockbusters" Carousel to HomePage UI
 - [x] Production Resilience & White Screen Prevention (Added React `<ErrorBoundary>`, inline dark body styling to `index.html`, and defensive `safeParseArray` / `safeParseObject` / `safeParseUser` across all context providers and pages)
 - [x] Clean Commercial Recommendations UI (Removed backend port badges, debug model selectors, hyperparameter tuners, and mathematical formulas from the frontend UI; all KNN and ML computation operates seamlessly under the hood in the backend engine)
+- [x] Removed "Recommendations" navigation tab from top Navbar header (desktop and mobile navigation bars)
 
 ## 5. Known Bugs & Solutions
 - JSX brace parsing issue on plain text math equations resolved in `RecommendationsPage.jsx`.

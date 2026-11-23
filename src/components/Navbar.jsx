@@ -58,11 +58,6 @@ export const Navbar = () => {
     { name: 'Home', path: '/', icon: Film },
     { name: 'Discover', path: '/discover', icon: Compass },
     { 
-      name: 'Recommendations', 
-      path: '/recommendations', 
-      icon: Sparkles 
-    },
-    { 
       name: 'Watchlist', 
       path: '/watchlist', 
       icon: Bookmark,
