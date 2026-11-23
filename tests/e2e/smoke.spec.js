@@ -62,4 +62,16 @@ test.describe('CinePulse End-to-End User Journeys', () => {
     const movieCards = page.locator('a[href^="/movie/"], img[alt]');
     await expect(movieCards.first()).toBeVisible();
   });
+
+  test('Profile and Watchlist pages render without client-side exceptions', async ({ page }) => {
+    // Verify Profile page renders cleanly without error boundary notice
+    await page.goto('/profile');
+    await expect(page.locator('text=Application Rendering Notice')).not.toBeVisible();
+    await expect(page.locator('h2, h1').first()).toBeVisible();
+
+    // Verify Watchlist renders cleanly without error boundary notice
+    await page.goto('/watchlist');
+    await expect(page.locator('text=Application Rendering Notice')).not.toBeVisible();
+    await expect(page.locator('h1:has-text("My Watchlist")')).toBeVisible();
+  });
 });

@@ -8,6 +8,7 @@ import {
   Star, 
   Edit3, 
   Film, 
+  ShieldCheck, 
   Check, 
   Camera, 
   Upload, 
