@@ -149,8 +149,9 @@ Multi-tier decoupled architecture:
 - [x] Profile Image Upload & Customizer: Added interactive photo upload to `src/pages/ProfilePage.jsx` allowing users to upload personal photos from their device (`<Camera>` overlay & file picker), enter custom image URLs, or select curated persona presets with live FileReader preview and backend sync.
 - [x] Profile Watchlist Showcase: Added "My Watchlist Queue" preview section with movie posters and metadata in `ProfilePage.jsx`.
 - [x] Fixed Watchlist Data Loss on Logout & Login: Resolved race condition where in-memory React state prematurely overwrote user local storage with empty arrays during user context switches. Added `loadedUserKeyRef` and `isLoadedRef` guards in `MovieContext.jsx`, normalized all movie ID references across client and server (`String(movieId)`), synchronized authoritative state from MongoDB on login without flickering or data loss, and ensured immediate local persistence during toggle actions.
-- [x] Zero-Regression Codebase Audit & Safe Dead Code Cleanup: Full-scale static and runtime audit conducted across all 7 phases. Removed confirmed unused CSS classes (`.glass-card`), eliminated 22 unused icon/component imports across 11 files (`MovieCard`, `ErrorBoundary`, `Navbar`, `GlobalSearchModal`, `HomePage`, `DiscoverPage`, `MovieDetailsPage`, `LoginPage`, `RecommendationsPage`, `WatchlistPage`, `ProfilePage`), removed unreferenced destructured variables (`favoriteGenres` in `HomePage`), and synchronized the E2E Playwright locator for the official Movie+ brand emblem. Verified with 100% test pass rate across 30 unit/API tests, 4 Playwright E2E browser tests, and Vite production build with zero regressions.
-- [!] User Constraint Noted: Do NOT push code to GitHub until explicit user command.
+- [x] Zero-Regression Codebase Audit & Safe Dead Code Cleanup: Full-scale static and runtime audit conducted across all 7 phases. Removed confirmed unused CSS classes (`.glass-card`), eliminated 22 unused icon/component imports across 11 files (`MovieCard`, `ErrorBoundary`, `Navbar`, `GlobalSearchModal`, `HomePage`, `DiscoverPage`, `MovieDetailsPage`, `LoginPage`, `RecommendationsPage`, `WatchlistPage`, `ProfilePage`), removed unreferenced destructured variables (`favoriteGenres` in `HomePage`), and synchronized the E2E Playwright locator for the official Movie+ brand emblem. Verified with 100% test pass rate across 30 unit/API tests, 5 Playwright E2E browser tests, and Vite production build with zero regressions.
+- [x] Updated and Polished README.md: Production-grade documentation with official branding, badges, architecture diagrams, directory structure, REST API matrix, quick start options, testing commands, and ML pipeline formulas.
+- [x] Code Push to GitHub: Code committed and pushed to `https://github.com/PranavSharma1008/Movie_Recommended_System.git` on branch `main` per explicit user instruction.
 
 ## 17. Current Development Status
 - Full-scale Security, Quality, and Production Readiness Audit completed (Phases 1 & 2).
@@ -182,8 +183,9 @@ Multi-tier decoupled architecture:
 3. Monitor daily rotated logs in `server/logs/`.
 
 ## 21. Important Context for Future Conversations
-- Project root: `/Users/pranavsharma/Documents/Stud/Movie Recommended System`.
+- Project root: `/Users/pranavsharma/Documents/Projects /Pending /Movie Recommended System`.
 - Backend runs on port `5001`; Frontend runs on port `5173`.
+- GitHub repository: `https://github.com/PranavSharma1008/Movie_Recommended_System.git` (main branch).
 - Global memory rule: Always inspect and maintain `MEMORY.md`, `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `DEVELOPMENT_LOG.md`, and `TASK_TRACKER.md`.
 - Never store secrets or sensitive credentials in memory files.
 - Single command startup: `./start.sh` or `npm start`.
