@@ -3,11 +3,16 @@ import { logger } from '../config/logger.js';
 
 /**
  * Creates and configures the Nodemailer SMTP Transporter
- * Defaulting to Gmail SMTP with provided app credentials
+ * Sourced securely from environment variables (process.env)
  */
 const createTransporter = () => {
-  const user = process.env.SMTP_USER || 'adminrecallc@gmail.com';
-  const pass = (process.env.SMTP_PASS || 'cmfg jazk innu ytmz').replace(/\s+/g, '');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, '') : undefined;
+
+  if (!user || !pass) {
+    logger.warn('SMTP credentials (SMTP_USER / SMTP_PASS) not set in environment. Outbound verification emails disabled.');
+    return null;
+  }
 
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -26,9 +31,13 @@ const transporter = createTransporter();
  * Verify SMTP connection on startup or demand
  */
 export const verifySmtpConnection = async () => {
+  if (!transporter) {
+    logger.warn('SMTP service skipped: SMTP_USER or SMTP_PASS not configured in environment.');
+    return false;
+  }
   try {
     await transporter.verify();
-    logger.info(`SMTP Service Connected: ready to send verification emails via ${process.env.SMTP_USER || 'Gmail'}`);
+    logger.info(`SMTP Service Connected: ready to send verification emails via ${process.env.SMTP_USER}`);
     return true;
   } catch (error) {
     logger.error(`SMTP Verification Failed: ${error.message}`);
@@ -235,6 +244,11 @@ If you did not request this verification code, please ignore this email.
     text,
     html
   };
+
+  if (!transporter) {
+    logger.warn(`Skipping verification email to ${to}: SMTP transporter not configured.`);
+    return { success: false, message: 'SMTP not configured' };
+  }
 
   const info = await transporter.sendMail(mailOptions);
   logger.info(`Verification email sent to ${to}. MessageId: ${info.messageId}`);

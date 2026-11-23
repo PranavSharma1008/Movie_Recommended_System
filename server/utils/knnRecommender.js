@@ -17,7 +17,8 @@ const STOPWORDS = new Set([
   'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
   'do', 'does', 'did', 'but', 'if', 'then', 'else', 'when', 'where', 'why',
   'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
-  'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very'
+  'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very',
+  'this', 'that', 'these', 'those', 'it', 'its'
 ]);
 
 // Tokenize and clean text into normalized terms

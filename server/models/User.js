@@ -54,7 +54,7 @@ const UserSchema = new mongoose.Schema(
     },
     favoriteGenres: {
       type: [String],
-      default: ['Sci-Fi', 'Action', 'Thriller', 'Drama']
+      default: []
     }
   },
   {
@@ -97,9 +97,6 @@ UserSchema.methods.generateVerificationOtp = function () {
 // Instance Method to check if entered OTP is valid and not expired
 UserSchema.methods.checkVerificationOtp = function (enteredOtp) {
   const cleanEntered = enteredOtp ? enteredOtp.toString().trim() : '';
-  if (cleanEntered === '123456') {
-    return true;
-  }
   if (!this.verificationOtp || !this.verificationOtpExpires) {
     return false;
   }

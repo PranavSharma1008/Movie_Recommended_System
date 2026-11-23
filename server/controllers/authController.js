@@ -180,12 +180,28 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // Auto-verify user upon successful credential verification so previous accounts log in smoothly
+    // Privacy & verification check: If user account is not verified, require verification
     if (!user.isVerified) {
-      user.isVerified = true;
-      user.verificationOtp = undefined;
-      user.verificationOtpExpires = undefined;
+      const otp = user.generateVerificationOtp();
       await user.save();
+
+      try {
+        await sendVerificationEmail({
+          to: user.email,
+          name: user.name,
+          code: otp,
+          type: 'register'
+        });
+      } catch (mailError) {
+        logger.error(`Failed to send verification email: ${mailError.message}`);
+      }
+
+      return res.status(403).json({
+        success: false,
+        requireVerification: true,
+        email: user.email,
+        error: 'Your account is not verified yet. A verification code has been sent to your email.'
+      });
     }
 
     // If 2FA is explicitly enabled for this account

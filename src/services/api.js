@@ -50,22 +50,6 @@ export const api = {
       }
       return data;
     } catch (networkOrApiErr) {
-      if (networkOrApiErr.data) throw networkOrApiErr;
-      
-      // Fallback for previous session if server was temporarily decoupled
-      const cached = localStorage.getItem('cinepulse_user');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed && parsed.email && parsed.email.toLowerCase() === cleanEmail) {
-            return {
-              success: true,
-              token: localStorage.getItem('cinepulse_token') || 'local-demo-token',
-              user: parsed
-            };
-          }
-        } catch {}
-      }
       throw networkOrApiErr;
     }
   },

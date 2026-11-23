@@ -28,6 +28,17 @@ const ensureRecommenderTrained = async () => {
   globalKNNRecommender.fit(movies);
 };
 
+// In-memory TTL cache for recommendation responses
+const recsCache = new Map();
+const RECS_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+
+const getCacheKey = (userId, genres, watched, ratings, mode, k) => {
+  const gStr = (genres || []).slice().sort().join(',');
+  const wStr = (watched || []).slice().sort().join(',');
+  const rKeys = Object.keys(ratings || {}).sort().map(k => `${k}:${ratings[k]}`).join(',');
+  return `${userId || 'anon'}_${mode}_${k}_g[${gStr}]_w[${wStr}]_r[${rKeys}]`;
+};
+
 // @desc    Get High-Accuracy Personalized KNN Recommendations
 // @route   POST /api/recommendations
 // @access  Public (Optional auth for personalization)
@@ -68,6 +79,21 @@ export const getRecommendations = async (req, res, next) => {
       }
     }
 
+    const cacheKey = getCacheKey(
+      req.user?._id?.toString(),
+      effectiveGenres,
+      effectiveWatched,
+      effectiveRatings,
+      algorithmMode,
+      k
+    );
+
+    const now = Date.now();
+    const cached = recsCache.get(cacheKey);
+    if (cached && now - cached.timestamp < RECS_CACHE_TTL_MS) {
+      return res.status(200).json(cached.payload);
+    }
+
     const recommendations = globalKNNRecommender.getPersonalizedRecommendations({
       favoriteGenres: effectiveGenres,
       watchedMovieIds: effectiveWatched,
@@ -77,14 +103,24 @@ export const getRecommendations = async (req, res, next) => {
       metric
     });
 
-    res.status(200).json({
+    const payload = {
       success: true,
       count: recommendations.length,
       k: parseInt(k) || 10,
       algorithmMode,
       metric,
       data: recommendations
-    });
+    };
+
+    recsCache.set(cacheKey, { timestamp: now, payload });
+
+    // Prune cache if exceeds 500 entries
+    if (recsCache.size > 500) {
+      const oldestKey = recsCache.keys().next().value;
+      recsCache.delete(oldestKey);
+    }
+
+    res.status(200).json(payload);
   } catch (error) {
     next(error);
   }

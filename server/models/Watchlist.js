@@ -13,6 +13,11 @@ const WatchlistSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    inWatchlist: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
     watched: {
       type: Boolean,
       default: false,

@@ -10,15 +10,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
-const DEFAULT_API_KEY = '44cdd23d855d0dc44ed0c840c30f3b25';
 
-export const getApiKey = () => process.env.TMDB_API_KEY || DEFAULT_API_KEY;
+export const getApiKey = () => process.env.TMDB_API_KEY || '';
 
 /**
  * Robust HTTPS request with automatic retries across transient network resets
  */
 export const fetchTMDB = async (endpoint, params = {}, retries = 3) => {
   const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('TMDB_API_KEY is not configured in environment variables');
+  }
   const queryParams = new URLSearchParams({ api_key: apiKey, ...params });
   const url = `${TMDB_API_BASE}${endpoint}?${queryParams.toString()}`;
 

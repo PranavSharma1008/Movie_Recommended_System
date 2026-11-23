@@ -7,8 +7,9 @@ import { Rating } from '../models/Rating.js';
 export const getWatchlist = async (req, res, next) => {
   try {
     const items = await Watchlist.find({ userId: req.user._id });
-    const watchlistIds = items.map(i => i.movieId);
-    const watchedIds = items.filter(i => i.watched).map(i => i.movieId);
+    // Strictly return only items explicitly added to watchlist
+    const watchlistIds = items.filter(i => i.inWatchlist === true).map(i => i.movieId);
+    const watchedIds = items.filter(i => i.watched === true).map(i => i.movieId);
 
     const ratings = await Rating.find({ userId: req.user._id });
     const ratingsMap = {};
@@ -39,18 +40,25 @@ export const toggleWatchlist = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Movie ID required' });
     }
 
-    const existing = await Watchlist.findOne({ userId: req.user._id, movieId });
-    if (existing) {
-      await Watchlist.deleteOne({ _id: existing._id });
+    let entry = await Watchlist.findOne({ userId: req.user._id, movieId });
+    if (entry) {
+      entry.inWatchlist = !entry.inWatchlist;
+      // If no longer in watchlist and not watched, delete document
+      if (!entry.inWatchlist && !entry.watched) {
+        await Watchlist.deleteOne({ _id: entry._id });
+      } else {
+        await entry.save();
+      }
       return res.status(200).json({
         success: true,
-        action: 'removed',
+        action: entry.inWatchlist ? 'added' : 'removed',
         movieId
       });
     } else {
       await Watchlist.create({
         userId: req.user._id,
         movieId,
+        inWatchlist: true,
         watched: false
       });
       return res.status(201).json({
@@ -76,16 +84,22 @@ export const toggleWatched = async (req, res, next) => {
 
     let entry = await Watchlist.findOne({ userId: req.user._id, movieId });
     if (!entry) {
+      // Marked as watched only, NOT added to watchlist
       entry = await Watchlist.create({
         userId: req.user._id,
         movieId,
+        inWatchlist: false,
         watched: true,
         watchedAt: new Date()
       });
     } else {
       entry.watched = !entry.watched;
       entry.watchedAt = entry.watched ? new Date() : null;
-      await entry.save();
+      if (!entry.inWatchlist && !entry.watched) {
+        await Watchlist.deleteOne({ _id: entry._id });
+      } else {
+        await entry.save();
+      }
     }
 
     res.status(200).json({
@@ -108,9 +122,12 @@ export const submitRating = async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'movieId and rating required' });
     }
 
-    const numRating = parseFloat(rating);
-    if (numRating < 1 || numRating > 5) {
-      return res.status(400).json({ success: false, error: 'Rating must be between 1 and 5' });
+    const numRating = Number(rating);
+    if (isNaN(numRating) || !isFinite(numRating) || numRating < 1 || numRating > 5) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid rating. Rating must be a valid number between 1 and 5'
+      });
     }
 
     const updated = await Rating.findOneAndUpdate(
@@ -119,12 +136,21 @@ export const submitRating = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Also mark as watched automatically
-    await Watchlist.findOneAndUpdate(
-      { userId: req.user._id, movieId },
-      { watched: true, watchedAt: new Date() },
-      { upsert: true }
-    );
+    // Also mark as watched automatically (without adding to watchlist)
+    let watchEntry = await Watchlist.findOne({ userId: req.user._id, movieId });
+    if (!watchEntry) {
+      await Watchlist.create({
+        userId: req.user._id,
+        movieId,
+        inWatchlist: false,
+        watched: true,
+        watchedAt: new Date()
+      });
+    } else if (!watchEntry.watched) {
+      watchEntry.watched = true;
+      watchEntry.watchedAt = new Date();
+      await watchEntry.save();
+    }
 
     res.status(200).json({
       success: true,

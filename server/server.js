@@ -67,7 +67,6 @@ app.get('/api/health', (req, res) => {
     service: 'CinePulse Recommendation API & Express REST Server',
     knnEngineTrained: globalKNNRecommender.isTrained,
     emailVerificationEnabled: true,
-    smtpUser: process.env.SMTP_USER || 'adminrecallc@gmail.com',
     timestamp: new Date().toISOString()
   });
 });
@@ -119,6 +118,9 @@ const startServer = async () => {
   });
 };
 
-startServer();
+// Only start HTTP listener if not running under automated tests
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
 
 export default app;

@@ -27,41 +27,49 @@ const getFallbackMovies = () => {
 // @access  Public
 export const getMovies = async (req, res, next) => {
   try {
-    const { genre, minRating, search, sort, language, limit = 100, page = 1 } = req.query;
+    const rawGenre = typeof req.query.genre === 'string' ? req.query.genre.trim() : undefined;
+    const rawLanguage = typeof req.query.language === 'string' ? req.query.language.trim() : undefined;
+    const rawMinRating = typeof req.query.minRating === 'string' ? parseFloat(req.query.minRating) : undefined;
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined;
+    const rawSearch = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 100));
+    const page = Math.max(1, parseInt(req.query.page) || 1);
 
     let movies = [];
     let total = 0;
 
     try {
       const query = {};
-      if (genre && genre !== 'All') {
-        if (genre === 'Indian Cinema' || genre === 'Hindi' || genre === 'Bollywood') {
+      if (rawGenre && rawGenre !== 'All') {
+        if (rawGenre === 'Indian Cinema' || rawGenre === 'Hindi' || rawGenre === 'Bollywood') {
           query.$or = [
             { language: { $in: ['hi', 'te', 'ta', 'ml', 'kn'] } },
             { genres: 'Indian Cinema' },
             { similarityKeywords: { $in: ['bollywood', 'india', 'hindi'] } }
           ];
         } else {
-          query.genres = genre;
+          query.genres = rawGenre;
         }
       }
-      if (language) {
-        query.language = language;
+      if (rawLanguage) {
+        query.language = rawLanguage;
       }
-      if (minRating) {
-        query.rating = { $gte: parseFloat(minRating) };
+      if (rawMinRating !== undefined && !isNaN(rawMinRating) && rawMinRating >= 0) {
+        query.rating = { $gte: rawMinRating };
       }
-      if (search) {
-        const cleanSearch = search.trim();
-        const searchRegexList = [{ title: { $regex: cleanSearch, $options: 'i' } },
-          { director: { $regex: cleanSearch, $options: 'i' } },
-          { 'cast.name': { $regex: cleanSearch, $options: 'i' } },
-          { similarityKeywords: { $regex: cleanSearch, $options: 'i' } },
-          { genres: { $regex: cleanSearch, $options: 'i' } }
+      if (rawSearch) {
+        const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const safeSearch = escapeRegex(rawSearch);
+        const searchRegexList = [
+          { title: { $regex: safeSearch, $options: 'i' } },
+          { director: { $regex: safeSearch, $options: 'i' } },
+          { 'cast.name': { $regex: safeSearch, $options: 'i' } },
+          { similarityKeywords: { $regex: safeSearch, $options: 'i' } },
+          { genres: { $regex: safeSearch, $options: 'i' } }
         ];
 
         // Actor Alias expansion (e.g. sharu khan -> Shah Rukh Khan)
-        const low = cleanSearch.toLowerCase();
+        const low = rawSearch.toLowerCase();
         if (low.includes('sharu') || low.includes('srk') || low.includes('shahrukh')) {
           searchRegexList.push({ 'cast.name': { $regex: 'Shah Rukh Khan', $options: 'i' } });
         }
@@ -85,11 +93,11 @@ export const getMovies = async (req, res, next) => {
       }
 
       let sortOptions = { rating: -1 };
-      if (sort === 'rating_asc') sortOptions = { rating: 1 };
-      if (sort === 'year_desc') sortOptions = { year: -1 };
-      if (sort === 'year_asc') sortOptions = { year: 1 };
-      if (sort === 'title_asc') sortOptions = { title: 1 };
-      if (sort === 'popularity') sortOptions = { rating: -1, year: -1 };
+      if (rawSort === 'rating_asc') sortOptions = { rating: 1 };
+      if (rawSort === 'year_desc') sortOptions = { year: -1 };
+      if (rawSort === 'year_asc') sortOptions = { year: 1 };
+      if (rawSort === 'title_asc') sortOptions = { title: 1 };
+      if (rawSort === 'popularity') sortOptions = { rating: -1, year: -1 };
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
       total = await Movie.countDocuments(query);
@@ -177,6 +185,7 @@ export const getMovieById = async (req, res, next) => {
     // Get K-Nearest Neighbors for this movie
     const similarMovies = globalKNNRecommender.getKNearestMovies(movie.id, 6);
 
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     res.status(200).json({
       success: true,
       data: movie,
@@ -204,6 +213,7 @@ export const getGenres = async (req, res, next) => {
 
     const uniqueGenres = Array.from(new Set(['All', 'Indian Cinema', ...genres])).filter(Boolean).sort();
 
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     res.status(200).json({
       success: true,
       data: uniqueGenres

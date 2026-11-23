@@ -142,12 +142,24 @@ Multi-tier decoupled architecture:
 - [x] Actor-Based Recommendations: Updated both frontend `recommendationEngine.js` and backend `knnRecommender.js` with actor affinity boost (`actorBoost * 0.30`) so watching a movie boosts other films starring the same lead cast.
 - [x] Actor Spotlight Carousel: Added "Actor Spotlight" section in `RecommendationsPage.jsx` surfacing "More Films Starring <Lead Actor>" from the user's watched movie history.
 - [x] Clickable Cast Profiles: Updated `MovieDetailsPage.jsx` cast member cards to link directly to `/discover?search=<actor>` for one-click filmography browsing.
+- [x] Isolated Watchlist Storage: Separated `inWatchlist` from `watched` in `WatchlistSchema` and `watchlistController.js`. Only movies explicitly added via "Add to Watchlist" appear in the user's Watchlist queue. Marking movies watched or submitting ratings no longer injects titles into Watchlist. Cleared pre-seeded watchlist items from `seeder.js` and database so all user watchlists start completely empty by default.
 
 ## 17. Current Development Status
 - Full-scale Security, Quality, and Production Readiness Audit completed (Phases 1 & 2).
 - Created `PROJECT_REQUIREMENTS_AUDIT.md` (evaluating 20 required quality & security categories).
 - Created `QUALITY_CHECKLIST.md` (tracking 21 explicit security, reliability, and test controls).
-- Awaiting user review and authorization before implementing Phase 13 remediation fixes.
+- Generated 10 modular standalone implementation prompts in `IMPLEMENTATION_PROMPTS/` (Phase Seventeen).
+- **[COMPLETED] Prompt 01 (`01_SECURITY_IMPLEMENTATION.md`)**:
+  - Removed universal backdoor OTP `123456` in `server/models/User.js`.
+  - Sourced SMTP and TMDB credentials strictly from environment variables without hardcoded fallbacks.
+  - Enforced verification gate on login (unverified users receive HTTP 403 `requireVerification`).
+  - Eliminated client fake token spoofing in `src/services/api.js`.
+  - Protected `POST /api/movies/sync-tmdb` with `protect` & `authorize('admin')`.
+  - Protected `POST /api/upload/avatar` with `protect`.
+  - Added ReDoS regex sanitization via `escapeRegex()` in `server/controllers/movieController.js`.
+  - Redacted `smtpUser` from `GET /api/health`.
+  - Live tests verified with curl: unauthorized access blocked (HTTP 401), ReDoS neutralized (< 2ms), health check sanitized.
+- Next prompt in sequence: `02_DATABASE_IMPROVEMENTS.md` (or `03_UNIT_TESTING_IMPLEMENTATION.md`).
 
 ## 18. Known Bugs and Security Vulnerabilities
 - **JSX brace parsing issue on plain text math equations**: Resolved in `RecommendationsPage.jsx`.

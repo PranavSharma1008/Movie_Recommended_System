@@ -84,18 +84,8 @@ const seedDatabase = async () => {
     await Rating.insertMany(initialRatings);
     logger.info(`Seeded ${initialRatings.length} initial user ratings`);
 
-    // Seed Initial Watchlist mapped to real TMDB movies
-    const initialWatchlist = [
-      { userId: demoUser._id, movieId: findMovieId('Interstellar', 0), watched: false },
-      { userId: demoUser._id, movieId: findMovieId('Dune: Part Two', 1), watched: false },
-      { userId: demoUser._id, movieId: findMovieId('K.G.F', 2), watched: false },
-      { userId: demoUser._id, movieId: findMovieId('Oppenheimer', 3), watched: false },
-      { userId: demoUser._id, movieId: findMovieId('Inception', 4), watched: true, watchedAt: new Date() },
-      { userId: demoUser._id, movieId: findMovieId('3 Idiots', 5), watched: true, watchedAt: new Date() }
-    ].filter(w => w.movieId);
-
-    await Watchlist.insertMany(initialWatchlist);
-    logger.info(`Seeded ${initialWatchlist.length} initial watchlist items`);
+    // Clean Initial Watchlist: Empty by default so only user-added titles appear
+    logger.info('Clean watchlist configured: 0 default movies seeded');
 
     logger.info('Database Seeding Complete!');
     process.exit(0);
