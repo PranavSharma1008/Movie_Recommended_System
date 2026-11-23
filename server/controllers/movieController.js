@@ -1,0 +1,226 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Movie } from '../models/Movie.js';
+import { globalKNNRecommender } from '../utils/knnRecommender.js';
+import { 
+  fetchMovieByIdFromTMDB, 
+  syncCuratedCatalog, 
+  searchTMDB 
+} from '../services/tmdbService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper to fallback to JSON seed if MongoDB has no records yet
+const getFallbackMovies = () => {
+  try {
+    const seedPath = path.resolve(__dirname, '../data/moviesSeed.json');
+    return JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
+  } catch {
+    return [];
+  }
+};
+
+// @desc    Get all movies with filtering, search, sorting & pagination
+// @route   GET /api/movies
+// @access  Public
+export const getMovies = async (req, res, next) => {
+  try {
+    const { genre, minRating, search, sort, language, limit = 100, page = 1 } = req.query;
+
+    let movies = [];
+    let total = 0;
+
+    try {
+      const query = {};
+      if (genre && genre !== 'All') {
+        if (genre === 'Indian Cinema' || genre === 'Hindi' || genre === 'Bollywood') {
+          query.$or = [
+            { language: { $in: ['hi', 'te', 'ta', 'ml', 'kn'] } },
+            { genres: 'Indian Cinema' },
+            { similarityKeywords: { $in: ['bollywood', 'india', 'hindi'] } }
+          ];
+        } else {
+          query.genres = genre;
+        }
+      }
+      if (language) {
+        query.language = language;
+      }
+      if (minRating) {
+        query.rating = { $gte: parseFloat(minRating) };
+      }
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { director: { $regex: search, $options: 'i' } },
+          { similarityKeywords: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      let sortOptions = { rating: -1 };
+      if (sort === 'rating_asc') sortOptions = { rating: 1 };
+      if (sort === 'year_desc') sortOptions = { year: -1 };
+      if (sort === 'year_asc') sortOptions = { year: 1 };
+      if (sort === 'title_asc') sortOptions = { title: 1 };
+      if (sort === 'popularity') sortOptions = { rating: -1, year: -1 };
+
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      total = await Movie.countDocuments(query);
+
+      // If database is completely empty and no search was specified, run automatic initial TMDB sync
+      if (total === 0 && !search && !genre) {
+        try {
+          const synced = await syncCuratedCatalog();
+          total = synced.length;
+          movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(parseInt(limit));
+        } catch {
+          movies = getFallbackMovies();
+          total = movies.length;
+        }
+      } else {
+        movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(parseInt(limit));
+      }
+    } catch {
+      // Graceful fallback to static JSON
+      movies = getFallbackMovies();
+      total = movies.length;
+    }
+
+    // Ensure recommender is trained
+    if (!globalKNNRecommender.isTrained && movies.length > 0) {
+      globalKNNRecommender.fit(movies);
+    }
+
+    res.status(200).json({
+      success: true,
+      count: movies.length,
+      total,
+      page: parseInt(page),
+      data: movies
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get single movie by ID with KNN Similar Movies (with dynamic TMDB fallback)
+// @route   GET /api/movies/:id
+// @access  Public
+export const getMovieById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let movie = null;
+
+    try {
+      // First check MongoDB by string id or tmdbId
+      const isNum = !isNaN(Number(id));
+      if (isNum) {
+        movie = await Movie.findOne({ $or: [{ id }, { tmdbId: Number(id) }] });
+      } else {
+        movie = await Movie.findOne({ id });
+      }
+    } catch {
+      movie = null;
+    }
+
+    // Fallback to static seed
+    if (!movie) {
+      const fallback = getFallbackMovies();
+      movie = fallback.find((m) => m.id === id || String(m.tmdbId) === String(id));
+    }
+
+    // If still not found and id is numeric or TMDB ID, dynamically fetch from TMDB API!
+    if (!movie && !isNaN(Number(id))) {
+      movie = await fetchMovieByIdFromTMDB(Number(id));
+    }
+
+    if (!movie) {
+      return res.status(404).json({
+        success: false,
+        error: `Movie with id '${id}' not found in database or TMDB`
+      });
+    }
+
+    // Ensure recommender is trained
+    if (!globalKNNRecommender.isTrained) {
+      const all = await Movie.find({});
+      if (all.length > 0) globalKNNRecommender.fit(all);
+    }
+
+    // Get K-Nearest Neighbors for this movie
+    const similarMovies = globalKNNRecommender.getKNearestMovies(movie.id, 6);
+
+    res.status(200).json({
+      success: true,
+      data: movie,
+      similarMovies
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all unique genres
+// @route   GET /api/movies/meta/genres
+// @access  Public
+export const getGenres = async (req, res, next) => {
+  try {
+    let genres = [];
+    try {
+      genres = await Movie.distinct('genres');
+    } catch {
+      const fallback = getFallbackMovies();
+      const set = new Set();
+      fallback.forEach((m) => (m.genres || []).forEach((g) => set.add(g)));
+      genres = Array.from(set);
+    }
+
+    const uniqueGenres = Array.from(new Set(['All', 'Indian Cinema', ...genres])).filter(Boolean).sort();
+
+    res.status(200).json({
+      success: true,
+      data: uniqueGenres
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Trigger Curated TMDB Sync
+// @route   POST /api/movies/sync-tmdb
+// @access  Public
+export const syncTMDB = async (req, res, next) => {
+  try {
+    const syncedMovies = await syncCuratedCatalog();
+    res.status(200).json({
+      success: true,
+      count: syncedMovies.length,
+      message: `Successfully synced ${syncedMovies.length} real TMDB movies (Indian & Global) into MongoDB`,
+      data: syncedMovies
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Live Search from TMDB API
+// @route   GET /api/movies/search/live
+// @access  Public
+export const searchLiveTMDB = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ success: false, error: 'Query parameter "q" is required' });
+    }
+    const results = await searchTMDB(q);
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
