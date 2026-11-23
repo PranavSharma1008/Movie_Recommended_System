@@ -3,9 +3,7 @@ import {
   Sparkles, 
   History, 
   Star, 
-  Film,
-  SlidersHorizontal,
-  Bookmark
+  SlidersHorizontal
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
 import { MovieCard } from '../components/MovieCard';

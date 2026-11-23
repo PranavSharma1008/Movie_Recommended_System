@@ -2,7 +2,6 @@ import React from 'react';
 import { HeroBanner } from '../components/HeroBanner';
 import { MovieCarousel } from '../components/MovieCarousel';
 import { useMovies } from '../context/MovieContext';
-import { Sparkles, TrendingUp, Flame, Award, Clock } from 'lucide-react';
 
 export const HomePage = () => {
   const {
@@ -12,7 +11,6 @@ export const HomePage = () => {
     recentlyReleasedMovies,
     indianMovies,
     personalizedRecommendations,
-    favoriteGenres,
     watched
   } = useMovies();
 

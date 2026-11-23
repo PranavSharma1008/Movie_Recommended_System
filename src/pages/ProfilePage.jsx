@@ -6,15 +6,12 @@ import {
   Bookmark, 
   CheckCircle2, 
   Star, 
-  RotateCcw, 
   Edit3, 
   Film, 
-  ShieldCheck,
-  Check,
-  Trash2,
-  Camera,
-  Upload,
-  Link as LinkIcon
+  Check, 
+  Camera, 
+  Upload, 
+  Link as LinkIcon 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMovies } from '../context/MovieContext';

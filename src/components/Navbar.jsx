@@ -3,7 +3,6 @@ import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Film, 
   Search, 
-  Sparkles, 
   Bookmark, 
   User, 
   LogOut, 
@@ -165,13 +164,6 @@ export const Navbar = () => {
                       >
                         <User className="w-4 h-4 text-slate-400" />
                         My Profile & Preferences
-                      </Link>
-                      <Link
-                        to="/recommendations"
-                        className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-200 hover:text-white hover:bg-cinema-700/60 transition-colors"
-                      >
-                        <Sparkles className="w-4 h-4 text-cinema-cyan" />
-                        AI Recommendation Engine
                       </Link>
                     </div>
 

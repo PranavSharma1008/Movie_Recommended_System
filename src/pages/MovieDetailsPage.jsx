@@ -10,11 +10,9 @@ import {
   Share2, 
   Calendar, 
   Clock, 
-  Award, 
   Film, 
   Users, 
   ArrowLeft,
-  Sparkles,
   Check
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';

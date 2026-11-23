@@ -4,13 +4,9 @@ import {
   Bookmark, 
   Trash2, 
   Check, 
-  Clock, 
   Star, 
-  Calendar, 
   Film, 
-  Play, 
-  ArrowRight,
-  Filter
+  Play
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
 import { MoviePoster } from '../components/MoviePoster';

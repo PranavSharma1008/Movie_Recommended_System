@@ -1,14 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
-  Filter, 
   SlidersHorizontal, 
   Grid, 
   List, 
   Star, 
   RotateCcw, 
-  Compass, 
-  Check 
+  Compass 
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
 import { SearchBar } from '../components/SearchBar';

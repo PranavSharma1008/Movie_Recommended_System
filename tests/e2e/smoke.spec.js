@@ -5,7 +5,7 @@ test.describe('CinePulse End-to-End User Journeys', () => {
     await page.goto('/');
 
     // Check brand header
-    await expect(page.locator('text=CinePulse').first()).toBeVisible();
+    await expect(page.locator('[aria-label="Movie+ Logo"]').first()).toBeVisible();
 
     // Check navbar links
     await expect(page.locator('a[href="/"]').first()).toBeVisible();
