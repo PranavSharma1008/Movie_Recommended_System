@@ -195,36 +195,55 @@ export class ContentBasedKNNRecommender {
     metric = 'cosine'
   }) {
     if (!this.isTrained) this.fit(this.movies);
+    const watchedSet = new Set(watchedMovieIds.map(String));
+
+    // 1. NEW USER / ZERO WATCHED MOVIES -> RANDOM RECOMMENDATIONS
+    if (!watchedMovieIds || watchedMovieIds.length === 0) {
+      const unwatched = this.movies.filter(m => !watchedSet.has(String(m.id)) && !watchedSet.has(String(m.tmdbId)));
+      const shuffled = [...unwatched];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      return shuffled.slice(0, k).map((movie, idx) => {
+        const rawMovie = movie.toObject ? movie.toObject() : movie;
+        return {
+          ...rawMovie,
+          cosineSimilarity: 0.5,
+          cosineDistance: 0.5,
+          compositeScore: 0.5,
+          matchPercentage: Math.max(76, 96 - (idx * 2)),
+          matchReasons: [
+            'Random discovery pick — mark any movie as watched to personalize recommendations!'
+          ]
+        };
+      });
+    }
+
+    // 2. USER HAS WATCHED AT LEAST 1 MOVIE -> CONTENT-BASED RECOMMENDATIONS
     const vocabSize = this.vocabulary.size;
     const userProfileVector = new Float64Array(vocabSize);
-    const watchedSet = new Set(watchedMovieIds);
 
-    // 1. Synthesize User Preference Vector from High-Rated Watched Movies
-    let positiveWeightSum = 0;
+    // Synthesize User Preference Vector from High-Rated Watched Movies
     watchedMovieIds.forEach(id => {
       const movieVec = this.movieVectors.get(id);
       if (!movieVec) return;
 
-      const ratingGiven = userRatings[id] !== undefined ? userRatings[id] : 4.0;
-      // Rating delta: ratings > 3.0 contribute positively; ratings < 3.0 penalize
-      const delta = ratingGiven - 2.5;
+      const ratingGiven = userRatings[id] !== undefined ? userRatings[id] : 4.5;
+      const delta = Math.max(1.0, ratingGiven - 1.5);
 
-      if (delta > 0) {
-        positiveWeightSum += delta;
-        for (let i = 0; i < vocabSize; i++) {
-          userProfileVector[i] += movieVec[i] * delta;
-        }
+      for (let i = 0; i < vocabSize; i++) {
+        userProfileVector[i] += movieVec[i] * delta;
       }
     });
 
-    // 2. Synthesize Favorite Genre Terms into Profile Vector
+    // Synthesize Favorite Genre Terms into Profile Vector if any
     favoriteGenres.forEach(genre => {
       const term = `genre_${genre.toLowerCase().replace(/\s+/g, '_')}`;
       const idx = this.vocabulary.get(term);
       if (idx !== undefined) {
-        const genreWeight = 1.5 * this.idf[idx];
-        userProfileVector[idx] += genreWeight;
-        positiveWeightSum += 1.5;
+        userProfileVector[idx] += 1.2 * this.idf[idx];
       }
     });
 
@@ -240,66 +259,57 @@ export class ContentBasedKNNRecommender {
       }
     }
 
-    // 3. Compute High-Accuracy Ranking for Candidate Unwatched Movies
+    // Compute High-Accuracy Ranking for Candidate Unwatched Movies
     const candidates = [];
-    const globalMeanRating = 8.2; // Prior consensus
-    const minVotesWeight = 25;
+    const lastWatchedId = watchedMovieIds[watchedMovieIds.length - 1];
+    const lastWatchedMovie = this.movies.find(m => String(m.id) === String(lastWatchedId) || String(m.tmdbId) === String(lastWatchedId));
+    const lastWatchedVec = lastWatchedId ? this.movieVectors.get(lastWatchedId) : null;
 
     this.movies.forEach(movie => {
-      if (watchedSet.has(movie.id)) return; // Recommend unwatched titles
+      if (watchedSet.has(String(movie.id)) || watchedSet.has(String(movie.tmdbId))) return;
       const movieVec = this.movieVectors.get(movie.id);
       if (!movieVec) return;
 
       // Base Cosine Similarity with User Profile
-      let cosSim = this.computeCosineSimilarity(userProfileVector, movieVec);
+      const cosSim = this.computeCosineSimilarity(userProfileVector, movieVec);
 
-      // Genre Affinity Overlap
-      const matchingFavGenres = (movie.genres || []).filter(g => favoriteGenres.includes(g));
-      const genreAffinity = favoriteGenres.length > 0
-        ? matchingFavGenres.length / favoriteGenres.length
-        : 0.5;
+      // Cosine similarity specifically to watched movies
+      let directWatchedSim = 0.0;
+      if (lastWatchedVec) {
+        directWatchedSim = this.computeCosineSimilarity(lastWatchedVec, movieVec);
+      }
 
-      // Watched Movie Max Similarity
-      let maxWatchedSim = 0.0;
-      let mostSimilarTitle = '';
+      let maxWatchedSim = directWatchedSim;
+      let mostSimilarTitle = lastWatchedMovie ? lastWatchedMovie.title : '';
       watchedMovieIds.forEach(wid => {
         const wVec = this.movieVectors.get(wid);
         if (wVec) {
           const sim = this.computeCosineSimilarity(movieVec, wVec);
           if (sim > maxWatchedSim) {
             maxWatchedSim = sim;
-            const wMovie = this.movies.find(m => m.id === wid);
+            const wMovie = this.movies.find(m => String(m.id) === String(wid) || String(m.tmdbId) === String(wid));
             if (wMovie) mostSimilarTitle = wMovie.title;
           }
         }
       });
 
-      // Bayesian Smoothed Quality Score: WR = (v/(v+m)) * R + (m/(v+m)) * C
-      const rawRating = movie.rating || 7.5;
-      const bayesianQuality = ((50 / (50 + minVotesWeight)) * rawRating + (minVotesWeight / (50 + minVotesWeight)) * globalMeanRating) / 10.0;
+      const matchingFavGenres = (movie.genres || []).filter(g => favoriteGenres.includes(g));
+      const genreAffinity = favoriteGenres.length > 0
+        ? matchingFavGenres.length / favoriteGenres.length
+        : 0.4;
 
-      const hasWatched = watchedMovieIds && watchedMovieIds.length > 0;
-      let finalScore = 0;
+      const bayesianQuality = ((movie.rating || 7.5) / 10.0);
+
+      // Score heavily prioritized on content similarity to watched movie
+      const finalScore = (maxWatchedSim * 0.55) + (cosSim * 0.30) + (genreAffinity * 0.10) + (bayesianQuality * 0.05);
+
       const reasons = [];
-
-      if (algorithmMode === 'genre') {
-        finalScore = (genreAffinity * 0.60) + (cosSim * 0.20) + (bayesianQuality * 0.20);
-        if (matchingFavGenres.length) reasons.push(`Strong match for your preferred ${matchingFavGenres.join(' & ')}`);
-      } else if (algorithmMode === 'watched' && maxWatchedSim > 0.25) {
-        finalScore = (maxWatchedSim * 0.55) + (cosSim * 0.25) + (bayesianQuality * 0.20);
-        if (mostSimilarTitle) reasons.push(`Because you enjoyed ${mostSimilarTitle}`);
-      } else if (algorithmMode === 'rating') {
-        finalScore = (bayesianQuality * 0.60) + (cosSim * 0.20) + (genreAffinity * 0.20);
-        reasons.push(`Acclaimed masterpiece with ${movie.rating}/10 critical rating`);
+      if (mostSimilarTitle && maxWatchedSim > 0.12) {
+        reasons.push(`Because you watched "${mostSimilarTitle}"`);
+      } else if (matchingFavGenres.length) {
+        reasons.push(`Aligned with ${matchingFavGenres[0]} preferences`);
       } else {
-        // High-Accuracy Hybrid AI Ensemble (Default)
-        if (!hasWatched) {
-          finalScore = (genreAffinity * 0.55) + (cosSim * 0.20) + (bayesianQuality * 0.25);
-        } else {
-          finalScore = (cosSim * 0.35) + (genreAffinity * 0.30) + (maxWatchedSim * 0.20) + (bayesianQuality * 0.15);
-        }
-        if (matchingFavGenres.length) reasons.push(`Aligned with ${matchingFavGenres[0]} preferences`);
-        if (mostSimilarTitle && maxWatchedSim > 0.3) reasons.push(`Similar thematic depth to ${mostSimilarTitle}`);
+        reasons.push(`Content match based on your watched movie history`);
       }
 
       const rawMovie = movie.toObject ? movie.toObject() : movie;
@@ -309,7 +319,7 @@ export class ContentBasedKNNRecommender {
         cosineSimilarity: Number(cosSim.toFixed(4)),
         cosineDistance: Number((1.0 - cosSim).toFixed(4)),
         compositeScore: Number(finalScore.toFixed(4)),
-        matchReasons: reasons.length ? reasons : [`Recommended via Content-Based TF-IDF KNN similarity`]
+        matchReasons: reasons
       });
     });
 
@@ -319,7 +329,7 @@ export class ContentBasedKNNRecommender {
     const topScore = candidates.length > 0 ? candidates[0].compositeScore : 1.0;
     candidates.forEach((cand, idx) => {
       const scoreGap = topScore > 0 ? (topScore - cand.compositeScore) / topScore : 0;
-      cand.matchPercentage = Math.max(70, Math.min(98, Math.round(97 - (idx * 2) - (scoreGap * 18))));
+      cand.matchPercentage = Math.max(72, Math.min(98, Math.round(98 - (idx * 2) - (scoreGap * 15))));
     });
 
     return candidates.slice(0, k);

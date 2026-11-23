@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }) => {
 
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     const status = localStorage.getItem('cinepulse_auth_status');
-    const token = localStorage.getItem('cinepulse_token');
-    return status === 'true' && !!token;
+    const stored = localStorage.getItem('cinepulse_user');
+    return status === 'true' && !!stored;
   });
 
   useEffect(() => {
@@ -50,26 +50,34 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: 'Please enter both email and password' };
     }
 
+    const cleanEmail = (email || '').trim().toLowerCase();
+
     try {
-      const data = await api.login(email, password);
+      const data = await api.login(cleanEmail, password);
       if (data && data.requireOtp) {
         return { success: false, requireOtp: true, email: data.email };
       }
 
       if (data && data.user) {
-        setUser({
+        const userData = {
           ...INITIAL_USER_PROFILE,
-          id: data.user.id,
+          id: data.user.id || data.user._id,
           name: data.user.name,
           email: data.user.email,
           role: data.user.role || 'user',
-          isVerified: data.user.isVerified ?? true,
+          isVerified: true,
           avatar: data.user.avatar || INITIAL_USER_PROFILE.avatar,
-          favoriteGenres: data.user.favoriteGenres || INITIAL_USER_PROFILE.favoriteGenres
-        });
+          favoriteGenres: Array.isArray(data.user.favoriteGenres) ? data.user.favoriteGenres : []
+        };
+        setUser(userData);
+        setIsAuthenticated(true);
+        localStorage.setItem('cinepulse_user', JSON.stringify(userData));
+        if (data.token) {
+          localStorage.setItem('cinepulse_token', data.token);
+        }
+        localStorage.setItem('cinepulse_auth_status', 'true');
       }
-      setIsAuthenticated(true);
-      showToast(`Welcome back, ${data?.user?.name || email}!`, 'success');
+      showToast(`Welcome back, ${data?.user?.name || cleanEmail}!`, 'success');
       return { success: true };
     } catch (err) {
       if (err.requireVerification) {

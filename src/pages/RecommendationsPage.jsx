@@ -35,13 +35,15 @@ export const RecommendationsPage = () => {
       <div>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cinema-800 border border-cinema-700 text-cinema-cyan text-xs font-semibold mb-3">
           <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-          <span>Curated For You</span>
+          <span>{safeWatched.length === 0 ? 'Discovery Engine' : 'Curated For You'}</span>
         </div>
         <h1 className="font-display font-extrabold text-3xl sm:text-5xl text-white tracking-tight">
           Personalized Recommendations
         </h1>
         <p className="text-slate-400 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
-          Films tailored to your personal taste, favorite genres, and viewing history.
+          {safeWatched.length === 0
+            ? 'Randomized catalog selection for new users. Mark any film as watched to unlock content-based AI recommendations!'
+            : `Personalized recommendations calibrated to your watched movies (${lastWatchedMovie ? lastWatchedMovie.title : 'viewing history'}).`}
         </p>
       </div>
 
@@ -96,14 +98,16 @@ export const RecommendationsPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-cinema-800 text-cinema-cyan border border-cinema-700">
-              Top Picks
+              {safeWatched.length === 0 ? 'Random Picks' : 'Content Matches'}
             </span>
             <h2 className="font-display font-bold text-2xl text-white">
-              Top Picks For You
+              {safeWatched.length === 0 ? 'Featured Random Cinema' : 'Top Picks For You'}
             </h2>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Films curated with highest affinity to your current preferences
+            {safeWatched.length === 0
+              ? 'Diverse random titles across the catalog — mark one as watched to calibrate recommendations!'
+              : `Films with closest content-similarity vectors to your watched history`}
           </p>
         </div>
 

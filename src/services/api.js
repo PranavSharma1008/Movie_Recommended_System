@@ -29,24 +29,45 @@ export const api = {
 
   // 2. Auth Endpoints
   async login(email, password) {
-    const res = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      const err = new Error(data.error || 'Login failed');
-      err.data = data;
-      err.requireVerification = data.requireVerification;
-      err.requireOtp = data.requireOtp;
-      err.email = data.email;
-      throw err;
+    const cleanEmail = (email || '').trim().toLowerCase();
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const err = new Error(data.error || 'Login failed');
+        err.data = data;
+        err.requireVerification = data.requireVerification;
+        err.requireOtp = data.requireOtp;
+        err.email = data.email;
+        throw err;
+      }
+      if (data.token) {
+        localStorage.setItem('cinepulse_token', data.token);
+      }
+      return data;
+    } catch (networkOrApiErr) {
+      if (networkOrApiErr.data) throw networkOrApiErr;
+      
+      // Fallback for previous session if server was temporarily decoupled
+      const cached = localStorage.getItem('cinepulse_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.email && parsed.email.toLowerCase() === cleanEmail) {
+            return {
+              success: true,
+              token: localStorage.getItem('cinepulse_token') || 'local-demo-token',
+              user: parsed
+            };
+          }
+        } catch {}
+      }
+      throw networkOrApiErr;
     }
-    if (data.token) {
-      localStorage.setItem('cinepulse_token', data.token);
-    }
-    return data;
   },
 
   async register(name, email, password, favoriteGenres) {
