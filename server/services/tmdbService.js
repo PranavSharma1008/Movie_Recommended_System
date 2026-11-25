@@ -16,6 +16,16 @@ const TMDB_API_BASES = process.env.TMDB_API_BASE
 
 const INDIAN_LANGUAGES = new Set(['hi', 'te', 'ta', 'ml', 'kn']);
 
+// Permanently excluded TMDB IDs (removed from dataset)
+export const EXCLUDED_TMDB_IDS = new Set([1141868]);
+
+const isExcludedMovie = (movie) => {
+  if (!movie) return false;
+  const numId = Number(movie.tmdbId ?? movie.id);
+  if (Number.isFinite(numId) && EXCLUDED_TMDB_IDS.has(numId)) return true;
+  return typeof movie.title === 'string' && movie.title.trim().toLowerCase() === 'tante siska';
+};
+
 export const getApiKey = () => process.env.TMDB_API_KEY || '';
 
 /**
@@ -184,6 +194,7 @@ export const transformTMDBMovie = (tmdbMovie, details = {}, category = {}) => {
  * Upsert movie into MongoDB: check TMDB ID, update if existing, insert if new
  */
 export const upsertMovie = async (movieData) => {
+  if (isExcludedMovie(movieData)) return null;
   return await Movie.findOneAndUpdate(
     {
       $or: [{ tmdbId: movieData.tmdbId }, { id: movieData.id }]
@@ -197,10 +208,11 @@ export const upsertMovie = async (movieData) => {
  * Bulk upsert movies into MongoDB cleanly and quickly
  */
 export const bulkUpsertMovies = async (movies = []) => {
-  if (!movies.length) return;
+  const filteredMovies = movies.filter((m) => !isExcludedMovie(m));
+  if (!filteredMovies.length) return;
   const chunkSize = 250;
-  for (let i = 0; i < movies.length; i += chunkSize) {
-    const chunk = movies.slice(i, i + chunkSize);
+  for (let i = 0; i < filteredMovies.length; i += chunkSize) {
+    const chunk = filteredMovies.slice(i, i + chunkSize);
     const ops = chunk.map((movieData) => ({
       updateOne: {
         filter: { $or: [{ tmdbId: movieData.tmdbId }, { id: movieData.id }] },
@@ -216,11 +228,15 @@ export const bulkUpsertMovies = async (movies = []) => {
  * Fetch detailed movie by TMDB ID dynamically and store in MongoDB
  */
 export const fetchMovieByIdFromTMDB = async (tmdbId) => {
+  if (EXCLUDED_TMDB_IDS.has(Number(tmdbId))) {
+    return null;
+  }
   try {
     const details = await fetchTMDB(`/movie/${tmdbId}`, {
       append_to_response: 'credits,videos,keywords'
     });
     const movieData = transformTMDBMovie(details, details);
+    if (isExcludedMovie(movieData)) return null;
     try {
       return await upsertMovie(movieData);
     } catch {
@@ -237,7 +253,9 @@ export const fetchMovieByIdFromTMDB = async (tmdbId) => {
  */
 export const searchTMDB = async (query, page = 1) => {
   const res = await fetchTMDB('/search/movie', { query, page, include_adult: false });
-  const rawResults = (res.results || []).slice(0, 12);
+  const rawResults = (res.results || [])
+    .filter((raw) => !EXCLUDED_TMDB_IDS.has(Number(raw.id)))
+    .slice(0, 12);
 
   const settled = await Promise.allSettled(
     rawResults.map(async (raw) => {
@@ -253,7 +271,7 @@ export const searchTMDB = async (query, page = 1) => {
   );
 
   const movies = settled
-    .filter((r) => r.status === 'fulfilled' && r.value)
+    .filter((r) => r.status === 'fulfilled' && r.value && !isExcludedMovie(r.value))
     .map((r) => r.value);
 
   if (movies.length > 0) {
@@ -305,7 +323,9 @@ export const collectExpandedTMDBIds = async ({
       responses.forEach((res) => {
         if (res.status === 'fulfilled') {
           (res.value?.results || []).forEach((m) => {
-            if (m?.id) idSet.add(Number(m.id));
+            if (m?.id && !EXCLUDED_TMDB_IDS.has(Number(m.id))) {
+              idSet.add(Number(m.id));
+            }
           });
         }
       });
@@ -338,6 +358,10 @@ export const collectExpandedTMDBIds = async ({
     });
   }
 
+  for (const excludedId of EXCLUDED_TMDB_IDS) {
+    idSet.delete(excludedId);
+  }
+
   return Array.from(idSet);
 };
 
@@ -346,7 +370,9 @@ export const collectExpandedTMDBIds = async ({
  */
 export const fetchExpandedTMDBCatalog = async (options = {}) => {
   const { concurrency = 15, onProgress, ...pageOptions } = options;
-  const uniqueIds = await collectExpandedTMDBIds(pageOptions);
+  const uniqueIds = (await collectExpandedTMDBIds(pageOptions)).filter(
+    (id) => !EXCLUDED_TMDB_IDS.has(Number(id))
+  );
   logger.info(`Collected ${uniqueIds.length} unique TMDB movie IDs. Fetching full metadata...`);
 
   const movies = [];
@@ -406,28 +432,29 @@ export const syncCuratedCatalog = async (options = {}) => {
  * Saves fetched TMDB data to seed, ML dataset, and frontend fallback files
  */
 export const saveStaticFallbacks = (movies) => {
-  if (!movies || movies.length === 0) return;
+  const filteredMovies = (movies || []).filter((m) => !isExcludedMovie(m));
+  if (filteredMovies.length === 0) return;
 
   try {
     const seedPath = path.resolve(__dirname, '../data/moviesSeed.json');
-    fs.writeFileSync(seedPath, JSON.stringify(movies, null, 2), 'utf-8');
-    logger.info(`Saved ${movies.length} real TMDB movies to ${seedPath}`);
+    fs.writeFileSync(seedPath, JSON.stringify(filteredMovies, null, 2), 'utf-8');
+    logger.info(`Saved ${filteredMovies.length} real TMDB movies to ${seedPath}`);
 
     const mlPath = path.resolve(__dirname, '../../ml_pipeline/data/movies_dataset.json');
     if (fs.existsSync(path.dirname(mlPath))) {
-      fs.writeFileSync(mlPath, JSON.stringify(movies, null, 2), 'utf-8');
-      logger.info(`Saved ${movies.length} real TMDB movies to ${mlPath}`);
+      fs.writeFileSync(mlPath, JSON.stringify(filteredMovies, null, 2), 'utf-8');
+      logger.info(`Saved ${filteredMovies.length} real TMDB movies to ${mlPath}`);
     }
 
     const frontendPath = path.resolve(__dirname, '../../src/data/moviesData.js');
     if (fs.existsSync(path.dirname(frontendPath))) {
-      const allGenres = Array.from(new Set(movies.flatMap((m) => m.genres || [])))
+      const allGenres = Array.from(new Set(filteredMovies.flatMap((m) => m.genres || [])))
         .filter((g) => g && g !== 'All')
         .sort();
 
       const frontendCode = `/**
  * Real TMDB Movie Dataset (Auto-generated from TMDB API)
- * Total Movies: ${movies.length} (Indian & Global Masterpieces)
+ * Total Movies: ${filteredMovies.length} (Indian & Global Masterpieces)
  */
 export const INITIAL_USER_PROFILE = {
   name: "",
@@ -439,10 +466,10 @@ export const INITIAL_USER_PROFILE = {
 
 export const ALL_GENRES = ${JSON.stringify(['All', ...allGenres], null, 2)};
 
-export const MOVIES_DATA = ${JSON.stringify(movies, null, 2)};
+export const MOVIES_DATA = ${JSON.stringify(filteredMovies, null, 2)};
 `;
       fs.writeFileSync(frontendPath, frontendCode, 'utf-8');
-      logger.info(`Saved ${movies.length} real TMDB movies to ${frontendPath}`);
+      logger.info(`Saved ${filteredMovies.length} real TMDB movies to ${frontendPath}`);
     }
   } catch (err) {
     logger.error(`Error saving static fallback files: ${err.message}`);

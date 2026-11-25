@@ -1,6 +1,6 @@
 /**
  * Real TMDB Movie Dataset (Auto-generated from TMDB API)
- * Total Movies: 1095 (Indian & Global Masterpieces)
+ * Total Movies: 1094 (Indian & Global Masterpieces)
  */
 export const INITIAL_USER_PROFILE = {
   name: "",
@@ -55567,47 +55567,6 @@ export const MOVIES_DATA = [
       "based on myths, legends or folklore",
       "hindu mythology",
       "epic"
-    ],
-    "language": "hi",
-    "trending": false,
-    "popular": false,
-    "topRated": false,
-    "recentlyReleased": true
-  },
-  {
-    "id": "1141868",
-    "tmdbId": 1141868,
-    "title": "Tante Siska",
-    "tagline": "",
-    "year": 2023,
-    "rating": 3,
-    "voteCount": "1",
-    "certification": "PG-13",
-    "runtime": "120 min",
-    "runtimeMinutes": 120,
-    "genres": [
-      "Drama",
-      "Romance",
-      "Indian Cinema"
-    ],
-    "director": "Acclaimed Director",
-    "writer": "Acclaimed Director",
-    "description": "No description available.",
-    "cast": [
-      {
-        "name": "Ensemble Cast",
-        "role": "Main Lead",
-        "avatar": ""
-      }
-    ],
-    "poster": "https://image.tmdb.org/t/p/w500/ui5arpwdiTrnAJ3P5Ue6XPSBMQx.jpg",
-    "backdrop": "https://image.tmdb.org/t/p/w500/ui5arpwdiTrnAJ3P5Ue6XPSBMQx.jpg",
-    "trailerId": "",
-    "similarityKeywords": [
-      "Drama",
-      "Romance",
-      "Indian Cinema",
-      "bollywood"
     ],
     "language": "hi",
     "trending": false,
