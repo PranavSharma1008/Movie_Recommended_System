@@ -9,9 +9,11 @@ export const MovieCarousel = ({
   movies = [],
   viewAllLink,
   badge,
-  showMatchScore = false
+  showMatchScore = false,
+  maxItems = 24
 }) => {
   const scrollContainerRef = useRef(null);
+  const displayMovies = maxItems > 0 ? movies.slice(0, maxItems) : movies;
 
   const scroll = (direction) => {
     if (scrollContainerRef.current) {
@@ -84,7 +86,7 @@ export const MovieCarousel = ({
         ref={scrollContainerRef}
         className="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-6 lg:px-8 py-2"
       >
-        {movies.map((movie) => (
+        {displayMovies.map((movie) => (
           <div
             key={movie.id}
             className="w-[180px] sm:w-[220px] md:w-[240px] shrink-0"

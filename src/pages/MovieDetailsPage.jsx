@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
 import { useToast } from '../context/ToastContext';
+import { api } from '../services/api';
 import { MoviePoster } from '../components/MoviePoster';
 import { MovieCarousel } from '../components/MovieCarousel';
 import { getSimilarMovies } from '../utils/recommendationEngine';
@@ -27,6 +28,7 @@ export const MovieDetailsPage = () => {
   const { showToast } = useToast();
   const { 
     movies, 
+    mergeMovies,
     toggleWatchlist, 
     isInWatchlist, 
     toggleWatched, 
@@ -36,12 +38,44 @@ export const MovieDetailsPage = () => {
     openTrailer 
   } = useMovies();
 
-  const movie = (movies || []).find((m) => String(m.id) === String(id) || String(m.tmdbId) === String(id));
+  const [fetchedMovie, setFetchedMovie] = useState(null);
+  const [isLoadingMovie, setIsLoadingMovie] = useState(false);
 
-  // Scroll to top when movie changes
+  const localMovie = (movies || []).find((m) => String(m.id) === String(id) || String(m.tmdbId) === String(id));
+  const movie = localMovie || fetchedMovie;
+
+  // Scroll to top when movie changes and dynamically fetch from backend/TMDB if missing
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [id]);
+    setFetchedMovie(null);
+    if (localMovie || !id) return;
+
+    let isMounted = true;
+    setIsLoadingMovie(true);
+    api.getMovieById(id)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.data) {
+          setFetchedMovie(res.data);
+          mergeMovies([res.data, ...(res.similarMovies || [])]);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoadingMovie(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [id, localMovie]);
+
+  if (isLoadingMovie && !movie) {
+    return (
+      <div className="min-h-screen pt-36 pb-20 px-4 text-center">
+        <Film className="w-12 h-12 mx-auto text-cinema-cyan animate-pulse mb-4" />
+        <p className="text-slate-300 text-sm">Loading movie details from TMDB...</p>
+      </div>
+    );
+  }
 
   if (!movie) {
     return (

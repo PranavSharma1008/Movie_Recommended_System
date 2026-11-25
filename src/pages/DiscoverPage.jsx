@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   SlidersHorizontal, 
@@ -6,16 +6,21 @@ import {
   List, 
   Star, 
   RotateCcw, 
-  Compass 
+  Compass,
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { useMovies } from '../context/MovieContext';
+import { api } from '../services/api';
 import { SearchBar } from '../components/SearchBar';
-import { matchMovieSearch } from '../utils/searchHelper';
+import { getMovieSearchScore } from '../utils/searchHelper';
 import { GenreFilter } from '../components/GenreFilter';
 import { MovieGrid } from '../components/MovieGrid';
 
+const PAGE_SIZE = 48;
+
 export const DiscoverPage = () => {
-  const { movies, allGenres } = useMovies();
+  const { movies, allGenres, mergeMovies } = useMovies();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Initial values from URL params if present
@@ -28,6 +33,9 @@ export const DiscoverPage = () => {
   const [minRating, setMinRating] = useState('0'); // 0, 7.5, 8.0, 8.5
   const [sortBy, setSortBy] = useState(initialSort); // 'popularity', 'rating', 'year', 'title'
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [isSearchingTMDB, setIsSearchingTMDB] = useState(false);
+  const lastLiveQueryRef = useRef('');
 
   // Sync state if URL query changes
   useEffect(() => {
@@ -60,32 +68,48 @@ export const DiscoverPage = () => {
     setSelectedGenre('All');
     setMinRating('0');
     setSortBy('popularity');
+    setVisibleCount(PAGE_SIZE);
     setSearchParams({});
   };
 
-  // Filter & Sort Logic
+  // Reset pagination when active filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, selectedGenre, minRating, sortBy]);
+
+  // Filter & Sort Logic (with case-insensitive search relevance priority when searching)
   const filteredMovies = useMemo(() => {
+    const trimmedSearch = searchQuery.trim();
+    const minR = parseFloat(minRating);
+
     return movies
-      .filter((movie) => {
-        // Intelligent Actor & Movie Search Filter
-        if (searchQuery.trim() && !matchMovieSearch(movie, searchQuery)) {
+      .map((movie) => ({
+        movie,
+        searchScore: trimmedSearch ? getMovieSearchScore(movie, trimmedSearch) : 0
+      }))
+      .filter(({ movie, searchScore }) => {
+        if (trimmedSearch && searchScore <= 0) {
           return false;
         }
 
         // Genre filter
-        if (selectedGenre !== 'All' && !movie.genres.includes(selectedGenre)) {
+        if (selectedGenre !== 'All' && !(movie.genres || []).includes(selectedGenre)) {
           return false;
         }
 
         // Min Rating filter
-        const minR = parseFloat(minRating);
         if (minR > 0 && movie.rating < minR) {
           return false;
         }
 
         return true;
       })
-      .sort((a, b) => {
+      .sort((entryA, entryB) => {
+        if (trimmedSearch && entryB.searchScore !== entryA.searchScore) {
+          return entryB.searchScore - entryA.searchScore;
+        }
+        const a = entryA.movie;
+        const b = entryB.movie;
         if (sortBy === 'rating') {
           return b.rating - a.rating;
         }
@@ -103,9 +127,47 @@ export const DiscoverPage = () => {
           return parseFloat(str) || 0;
         };
         return parseVotes(b.voteCount) - parseVotes(a.voteCount);
-      });
+      })
+      .map(({ movie }) => movie);
   }, [movies, searchQuery, selectedGenre, minRating, sortBy]);
 
+  // Debounced live TMDB fallback search when local results are sparse
+  const triggerLiveTMDBSearch = async (queryText) => {
+    const trimmed = (queryText || '').trim();
+    if (trimmed.length < 2) return;
+    setIsSearchingTMDB(true);
+    lastLiveQueryRef.current = trimmed.toLowerCase();
+    try {
+      const res = await api.searchLiveTMDB(trimmed);
+      if (Array.isArray(res?.data) && res.data.length > 0) {
+        mergeMovies(res.data);
+      }
+    } catch {
+      // Offline or rate-limited; keep local results
+    } finally {
+      setIsSearchingTMDB(false);
+    }
+  };
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < 2) return;
+    if (filteredMovies.length >= 6) return;
+    if (lastLiveQueryRef.current === trimmed.toLowerCase()) return;
+
+    const timer = setTimeout(() => {
+      triggerLiveTMDBSearch(trimmed);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, filteredMovies.length]);
+
+  const displayedMovies = useMemo(
+    () => filteredMovies.slice(0, visibleCount),
+    [filteredMovies, visibleCount]
+  );
+
+  const hasMoreMovies = visibleCount < filteredMovies.length;
   const hasActiveFilters = searchQuery !== '' || selectedGenre !== 'All' || minRating !== '0' || sortBy !== 'popularity';
 
   return (
@@ -124,7 +186,7 @@ export const DiscoverPage = () => {
           Discover Movies
         </h1>
         <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-          Search, filter by genre and rating, and sort through our curated library of 30+ cinematic masterworks.
+          Search, filter by genre and rating, and explore {movies.length.toLocaleString()}+ movies plus live TMDB search.
         </p>
       </div>
 
@@ -214,28 +276,63 @@ export const DiscoverPage = () => {
           <span>
             Showing <strong className="text-white">{filteredMovies.length}</strong> {filteredMovies.length === 1 ? 'movie' : 'movies'}
           </span>
+          {hasMoreMovies && (
+            <span className="text-slate-500">• Viewing first {displayedMovies.length}</span>
+          )}
           {hasActiveFilters && (
             <span className="text-slate-500">• Filters active</span>
           )}
+          {isSearchingTMDB && (
+            <span className="inline-flex items-center gap-1.5 text-cinema-cyan font-medium">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Fetching live from TMDB...
+            </span>
+          )}
         </div>
 
-        {hasActiveFilters && (
-          <button
-            onClick={handleResetFilters}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cinema-800 hover:bg-cinema-750 text-slate-300 hover:text-white border border-cinema-700 transition-colors"
-          >
-            <RotateCcw className="w-3 h-3 text-slate-400" />
-            <span>Reset All Filters</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {searchQuery.trim().length >= 2 && (
+            <button
+              onClick={() => triggerLiveTMDBSearch(searchQuery)}
+              disabled={isSearchingTMDB}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cinema-800 hover:bg-cinema-750 text-cinema-cyan border border-cinema-700 transition-colors disabled:opacity-50"
+            >
+              <Globe className="w-3 h-3" />
+              <span>Fetch More from TMDB</span>
+            </button>
+          )}
+          {hasActiveFilters && (
+            <button
+              onClick={handleResetFilters}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cinema-800 hover:bg-cinema-750 text-slate-300 hover:text-white border border-cinema-700 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3 text-slate-400" />
+              <span>Reset All Filters</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Movie Results Grid or List */}
       <MovieGrid
-        movies={filteredMovies}
+        movies={displayedMovies}
         viewMode={viewMode}
         emptyMessage={`No movies found matching "${searchQuery}" or the selected filters. Try broadening your criteria.`}
       />
+
+      {hasMoreMovies && (
+        <div className="mt-10 flex flex-col items-center gap-2">
+          <button
+            onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+            className="px-6 py-3 rounded-xl bg-cinema-800 hover:bg-cinema-750 text-white font-semibold text-sm border border-cinema-700 hover:border-cinema-accent/60 shadow-lg transition-all"
+          >
+            Load More Movies ({filteredMovies.length - displayedMovies.length} remaining)
+          </button>
+          <span className="text-xs text-slate-500">
+            Displaying {displayedMovies.length} of {filteredMovies.length} matching movies
+          </span>
+        </div>
+      )}
     </div>
   );
 };

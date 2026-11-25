@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Star, ArrowRight, Film } from 'lucide-react';
+import { Search, X, Star, ArrowRight, Film, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMovies } from '../context/MovieContext';
+import { api } from '../services/api';
 import { MoviePoster } from './MoviePoster';
-import { matchMovieSearch, getMovieMatchHighlight } from '../utils/searchHelper';
+import { getMovieSearchScore, getMovieMatchHighlight } from '../utils/searchHelper';
 
 export const GlobalSearchModal = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
-  const { movies } = useMovies();
+  const [isSearchingTMDB, setIsSearchingTMDB] = useState(false);
+  const { movies, mergeMovies } = useMovies();
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const lastLiveQueryRef = useRef('');
 
   useEffect(() => {
     if (isOpen) {
@@ -34,11 +37,44 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const filteredMovies = query.trim()
-    ? (movies || []).filter((m) => matchMovieSearch(m, query))
+    ? (movies || [])
+        .map((m) => ({ movie: m, score: getMovieSearchScore(m, query) }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return (b.movie.rating || 0) - (a.movie.rating || 0);
+        })
+        .map((item) => item.movie)
     : (movies || []).slice(0, 6);
+
+  const visibleResults = filteredMovies.slice(0, 25);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2 || filteredMovies.length >= 5) return;
+    if (lastLiveQueryRef.current === trimmed.toLowerCase()) return;
+
+    const timer = setTimeout(async () => {
+      setIsSearchingTMDB(true);
+      lastLiveQueryRef.current = trimmed.toLowerCase();
+      try {
+        const res = await api.searchLiveTMDB(trimmed);
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          mergeMovies(res.data);
+        }
+      } catch {
+        // Keep local results
+      } finally {
+        setIsSearchingTMDB(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, query, filteredMovies.length]);
+
+  if (!isOpen) return null;
 
   const handleSelectMovie = (id) => {
     navigate(`/movie/${id}`);
@@ -84,7 +120,10 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
         {/* Results List */}
         <div className="p-3 overflow-y-auto space-y-1 divide-y divide-cinema-800/40">
           <div className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-            <span>{query.trim() ? `Search Results (${filteredMovies.length})` : 'Popular Searches'}</span>
+            <span className="flex items-center gap-2">
+              {query.trim() ? `Search Results (${filteredMovies.length})` : 'Popular Searches'}
+              {isSearchingTMDB && <Loader2 className="w-3.5 h-3.5 animate-spin text-cinema-cyan" />}
+            </span>
             <span className="text-[11px] text-slate-500 font-normal">Click to view details</span>
           </div>
 
@@ -95,7 +134,7 @@ export const GlobalSearchModal = ({ isOpen, onClose }) => {
               <p className="text-xs text-slate-400 mt-1">Try searching for an actor like "Shah Rukh Khan", "Aamir", or a genre</p>
             </div>
           ) : (
-            filteredMovies.map((movie) => {
+            visibleResults.map((movie) => {
               const highlight = getMovieMatchHighlight(movie, query);
               const leadCast = (movie.cast || []).slice(0, 3).map((c) => c.name).join(', ');
 

@@ -146,7 +146,7 @@ export const api = {
   },
 
   // 3. Movies Catalog Endpoints
-  async getMovies({ genre, minRating, search, sort, page = 1, limit = 50 } = {}) {
+  async getMovies({ genre, minRating, search, sort, page = 1, limit = 2500 } = {}) {
     const params = new URLSearchParams();
     if (genre && genre !== 'All') params.append('genre', genre);
     if (minRating) params.append('minRating', minRating);
@@ -159,6 +159,25 @@ export const api = {
     if (!res.ok) throw new Error('Failed to fetch movies');
     const data = await res.json();
     return data.data;
+  },
+
+  async getAllMovies({ pageSize = 2500 } = {}) {
+    const firstRes = await fetch(`${API_BASE_URL}/movies?page=1&limit=${pageSize}`);
+    if (!firstRes.ok) throw new Error('Failed to fetch movies');
+    const firstPayload = await firstRes.json();
+    const collected = Array.isArray(firstPayload.data) ? [...firstPayload.data] : [];
+    const total = Number(firstPayload.total) || collected.length;
+
+    let currentPage = 2;
+    while (collected.length < total) {
+      const res = await fetch(`${API_BASE_URL}/movies?page=${currentPage}&limit=${pageSize}`);
+      if (!res.ok) break;
+      const payload = await res.json();
+      if (!Array.isArray(payload.data) || payload.data.length === 0) break;
+      collected.push(...payload.data);
+      currentPage += 1;
+    }
+    return collected;
   },
 
   async getMovieById(id) {

@@ -9,12 +9,17 @@ import { globalKNNRecommender } from '../utils/knnRecommender.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TMDB_API_BASE = 'https://api.themoviedb.org/3';
+// api.tmdb.org works reliably even on networks that block api.themoviedb.org; keep both as fallbacks
+const TMDB_API_BASES = process.env.TMDB_API_BASE
+  ? [process.env.TMDB_API_BASE]
+  : ['https://api.tmdb.org/3', 'https://api.themoviedb.org/3'];
+
+const INDIAN_LANGUAGES = new Set(['hi', 'te', 'ta', 'ml', 'kn']);
 
 export const getApiKey = () => process.env.TMDB_API_KEY || '';
 
 /**
- * Robust HTTPS request with automatic retries across transient network resets
+ * Robust HTTPS request with automatic host fallback and retries across transient network resets
  */
 export const fetchTMDB = async (endpoint, params = {}, retries = 3) => {
   const apiKey = getApiKey();
@@ -22,17 +27,19 @@ export const fetchTMDB = async (endpoint, params = {}, retries = 3) => {
     throw new Error('TMDB_API_KEY is not configured in environment variables');
   }
   const queryParams = new URLSearchParams({ api_key: apiKey, ...params });
-  const url = `${TMDB_API_BASE}${endpoint}?${queryParams.toString()}`;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
+    const baseUrl = TMDB_API_BASES[(attempt - 1) % TMDB_API_BASES.length];
+    const url = `${baseUrl}${endpoint}?${queryParams.toString()}`;
+
     try {
       return await new Promise((resolve, reject) => {
         const req = https.get(
           url,
           {
             headers: {
-              'User-Agent': 'CinePulse/1.0',
-              'Accept': 'application/json'
+              'User-Agent': 'MoviePlus/1.0',
+              Accept: 'application/json'
             },
             timeout: 8000
           },
@@ -59,34 +66,34 @@ export const fetchTMDB = async (endpoint, params = {}, retries = 3) => {
         });
       });
     } catch (err) {
-      if (attempt === retries) {
-        logger.error(`TMDB fetch failed after ${retries} attempts: ${err.message} (${endpoint})`);
+      const isNotFound = err.message.includes('TMDB HTTP 404');
+      if (isNotFound || attempt === retries) {
+        if (!isNotFound) {
+          logger.error(`TMDB fetch failed after ${retries} attempts: ${err.message} (${endpoint})`);
+        }
         throw err;
       }
-      await new Promise((r) => setTimeout(r, 400 * attempt));
+      await new Promise((r) => setTimeout(r, 350 * attempt));
     }
   }
 };
 
 /**
- * Transform raw TMDB details into CinePulse Movie model format
+ * Transform raw TMDB details into Movie+ Movie model format
  */
 export const transformTMDBMovie = (tmdbMovie, details = {}, category = {}) => {
   const credits = details.credits || {};
   const videos = details.videos?.results || [];
   const rawKeywords = details.keywords?.keywords || details.keywords?.results || [];
 
-  // Director
   const director = credits.crew?.find((c) => c.job === 'Director')?.name || 'Acclaimed Director';
 
-  // Writers
   const writers = credits.crew
     ?.filter((c) => ['Screenplay', 'Writer', 'Story'].includes(c.job))
     .map((c) => c.name)
     .slice(0, 2)
     .join(', ');
 
-  // Lead Cast (up to 5 actors)
   const cast = (credits.cast || []).slice(0, 5).map((actor) => ({
     name: actor.name,
     role: actor.character || 'Leading Cast',
@@ -95,23 +102,29 @@ export const transformTMDBMovie = (tmdbMovie, details = {}, category = {}) => {
       : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
   }));
 
-  // YouTube Trailer
   const trailer =
     videos.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
     videos.find((v) => v.site === 'YouTube' && v.type === 'Teaser') ||
     videos.find((v) => v.site === 'YouTube');
 
-  // Genres
+  const originalLang = tmdbMovie.original_language || details.original_language || 'en';
+  const isIndian =
+    INDIAN_LANGUAGES.has(originalLang) ||
+    (details.origin_country || tmdbMovie.origin_country || []).includes('IN');
+
   const genres = (details.genres || tmdbMovie.genres || [])
     .map((g) => (typeof g === 'string' ? g : g.name))
     .filter(Boolean);
 
-  const finalGenres = genres.length > 0 ? genres : ['Drama'];
+  const finalGenres = genres.length > 0 ? [...genres] : ['Drama'];
+  if (isIndian && !finalGenres.includes('Indian Cinema')) {
+    finalGenres.push('Indian Cinema');
+  }
 
-  // Keywords
-  const similarityKeywords = rawKeywords.length > 0
-    ? rawKeywords.map((k) => k.name)
-    : [...finalGenres, tmdbMovie.original_language === 'hi' ? 'bollywood' : 'cinema'];
+  const similarityKeywords =
+    rawKeywords.length > 0
+      ? rawKeywords.map((k) => k.name)
+      : [...finalGenres, isIndian ? 'bollywood' : 'cinema'];
 
   const posterPath = tmdbMovie.poster_path || details.poster_path;
   const backdropPath = tmdbMovie.backdrop_path || details.backdrop_path;
@@ -120,22 +133,18 @@ export const transformTMDBMovie = (tmdbMovie, details = {}, category = {}) => {
     ? `https://image.tmdb.org/t/p/w500${posterPath}`
     : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=80';
 
-  const backdrop = backdropPath
-    ? `https://image.tmdb.org/t/p/original${backdropPath}`
-    : poster;
+  const backdrop = backdropPath ? `https://image.tmdb.org/t/p/original${backdropPath}` : poster;
 
   const voteAverage = Number((tmdbMovie.vote_average || details.vote_average || 7.5).toFixed(1));
   const voteCountRaw = tmdbMovie.vote_count || details.vote_count || 1000;
-  const voteCountFormatted = voteCountRaw >= 1000
-    ? `${(voteCountRaw / 1000).toFixed(1)}K`
-    : `${voteCountRaw}`;
+  const voteCountFormatted =
+    voteCountRaw >= 1000 ? `${(voteCountRaw / 1000).toFixed(1)}K` : `${voteCountRaw}`;
 
   const runtimeMinutes = details.runtime || 120;
-  const releaseYear = (tmdbMovie.release_date || details.release_date)
-    ? new Date(tmdbMovie.release_date || details.release_date).getFullYear()
-    : 2024;
-
-  const originalLang = tmdbMovie.original_language || details.original_language || 'en';
+  const rawReleaseDate = tmdbMovie.release_date || details.release_date;
+  const parsedYear = rawReleaseDate ? new Date(rawReleaseDate).getFullYear() : 2024;
+  const releaseYear = Number.isFinite(parsedYear) ? parsedYear : 2024;
+  const popularity = details.popularity || tmdbMovie.popularity || 0;
 
   return {
     id: String(tmdbMovie.id),
@@ -158,10 +167,16 @@ export const transformTMDBMovie = (tmdbMovie, details = {}, category = {}) => {
     trailerId: trailer ? trailer.key : '',
     similarityKeywords,
     language: originalLang,
-    trending: !!category.trending,
-    popular: !!category.popular,
-    topRated: !!category.topRated,
-    recentlyReleased: !!category.recentlyReleased
+    trending: category.trending !== undefined ? !!category.trending : popularity >= 35,
+    popular:
+      category.popular !== undefined
+        ? !!category.popular
+        : voteCountRaw >= 1500 || popularity >= 25,
+    topRated: category.topRated !== undefined ? !!category.topRated : voteAverage >= 8.0,
+    recentlyReleased:
+      category.recentlyReleased !== undefined
+        ? !!category.recentlyReleased
+        : releaseYear >= 2023
   };
 };
 
@@ -179,6 +194,25 @@ export const upsertMovie = async (movieData) => {
 };
 
 /**
+ * Bulk upsert movies into MongoDB cleanly and quickly
+ */
+export const bulkUpsertMovies = async (movies = []) => {
+  if (!movies.length) return;
+  const chunkSize = 250;
+  for (let i = 0; i < movies.length; i += chunkSize) {
+    const chunk = movies.slice(i, i + chunkSize);
+    const ops = chunk.map((movieData) => ({
+      updateOne: {
+        filter: { $or: [{ tmdbId: movieData.tmdbId }, { id: movieData.id }] },
+        update: { $set: movieData },
+        upsert: true
+      }
+    }));
+    await Movie.bulkWrite(ops, { ordered: false });
+  }
+};
+
+/**
  * Fetch detailed movie by TMDB ID dynamically and store in MongoDB
  */
 export const fetchMovieByIdFromTMDB = async (tmdbId) => {
@@ -187,7 +221,11 @@ export const fetchMovieByIdFromTMDB = async (tmdbId) => {
       append_to_response: 'credits,videos,keywords'
     });
     const movieData = transformTMDBMovie(details, details);
-    return await upsertMovie(movieData);
+    try {
+      return await upsertMovie(movieData);
+    } catch {
+      return movieData;
+    }
   } catch (err) {
     logger.warn(`Could not dynamically fetch TMDB movie ${tmdbId}: ${err.message}`);
     return null;
@@ -195,135 +233,177 @@ export const fetchMovieByIdFromTMDB = async (tmdbId) => {
 };
 
 /**
- * Search TMDB dynamically
+ * Search TMDB dynamically across all ~1M+ TMDB movies and cache results into MongoDB
  */
 export const searchTMDB = async (query, page = 1) => {
-  const res = await fetchTMDB('/search/movie', { query, page });
-  const rawResults = res.results || [];
+  const res = await fetchTMDB('/search/movie', { query, page, include_adult: false });
+  const rawResults = (res.results || []).slice(0, 12);
 
-  const movies = [];
-  for (const raw of rawResults.slice(0, 10)) {
+  const settled = await Promise.allSettled(
+    rawResults.map(async (raw) => {
+      try {
+        const details = await fetchTMDB(`/movie/${raw.id}`, {
+          append_to_response: 'credits,videos,keywords'
+        });
+        return transformTMDBMovie(raw, details);
+      } catch {
+        return transformTMDBMovie(raw, {});
+      }
+    })
+  );
+
+  const movies = settled
+    .filter((r) => r.status === 'fulfilled' && r.value)
+    .map((r) => r.value);
+
+  if (movies.length > 0) {
     try {
-      const details = await fetchTMDB(`/movie/${raw.id}`, {
-        append_to_response: 'credits,videos,keywords'
-      });
-      const transformed = transformTMDBMovie(raw, details);
-      await upsertMovie(transformed);
-      movies.push(transformed);
-    } catch {
-      const fallback = transformTMDBMovie(raw, {});
-      movies.push(fallback);
+      await bulkUpsertMovies(movies);
+    } catch (err) {
+      logger.warn(`Live TMDB search DB upsert skipped: ${err.message}`);
     }
   }
+
+  return movies;
+};
+
+const CURATED_INDIAN_IDS = [
+  20453, 579974, 360814, 19404, 7508, 297222, 256040, 350312, 560057, 632617,
+  872906, 14624, 106440, 534780, 4247, 73783, 376867, 497814, 335033, 955991,
+  19402, 592834, 780076, 799766
+];
+
+const CURATED_GLOBAL_IDS = [
+  157336, 27205, 155, 872585, 693134, 550, 278, 496243, 603, 299534, 634649,
+  129, 76600, 19995, 680, 545611, 438631, 98, 238, 13, 244786, 569094, 361743,
+  335984, 929590
+];
+
+const TMDB_GENRE_IDS = [28, 12, 16, 35, 80, 18, 14, 27, 9648, 10749, 878, 53];
+
+/**
+ * Collect a comprehensive deduplicated list of TMDB movie IDs across global, Indian, and genre catalogs
+ */
+export const collectExpandedTMDBIds = async ({
+  popularPages = 15,
+  topRatedPages = 15,
+  nowPlayingPages = 4,
+  upcomingPages = 3,
+  trendingPages = 3,
+  indianPages = 12,
+  genrePages = 2
+} = {}) => {
+  const idSet = new Set([...CURATED_INDIAN_IDS, ...CURATED_GLOBAL_IDS]);
+
+  const fetchListPages = async (endpoint, pages, extraParams = {}) => {
+    const pageNums = Array.from({ length: pages }, (_, i) => i + 1);
+    for (let i = 0; i < pageNums.length; i += 5) {
+      const batch = pageNums.slice(i, i + 5);
+      const responses = await Promise.allSettled(
+        batch.map((page) => fetchTMDB(endpoint, { page, ...extraParams }))
+      );
+      responses.forEach((res) => {
+        if (res.status === 'fulfilled') {
+          (res.value?.results || []).forEach((m) => {
+            if (m?.id) idSet.add(Number(m.id));
+          });
+        }
+      });
+    }
+  };
+
+  await fetchListPages('/trending/movie/week', trendingPages);
+  await fetchListPages('/movie/popular', popularPages);
+  await fetchListPages('/movie/top_rated', topRatedPages);
+  await fetchListPages('/movie/now_playing', nowPlayingPages);
+  await fetchListPages('/movie/upcoming', upcomingPages);
+  await fetchListPages('/discover/movie', indianPages, {
+    with_origin_country: 'IN',
+    sort_by: 'vote_count.desc'
+  });
+
+  // Regional Indian cinema pages (Hindi, Telugu, Tamil, Malayalam)
+  for (const lang of ['hi', 'te', 'ta', 'ml']) {
+    await fetchListPages('/discover/movie', 2, {
+      with_original_language: lang,
+      sort_by: 'popularity.desc'
+    });
+  }
+
+  // Genre diversity across global catalog
+  for (const genreId of TMDB_GENRE_IDS) {
+    await fetchListPages('/discover/movie', genrePages, {
+      with_genres: String(genreId),
+      sort_by: 'vote_count.desc'
+    });
+  }
+
+  return Array.from(idSet);
+};
+
+/**
+ * Fetch deep metadata for an array of TMDB IDs in parallel batches
+ */
+export const fetchExpandedTMDBCatalog = async (options = {}) => {
+  const { concurrency = 15, onProgress, ...pageOptions } = options;
+  const uniqueIds = await collectExpandedTMDBIds(pageOptions);
+  logger.info(`Collected ${uniqueIds.length} unique TMDB movie IDs. Fetching full metadata...`);
+
+  const movies = [];
+  const seenIds = new Set();
+
+  for (let i = 0; i < uniqueIds.length; i += concurrency) {
+    const batch = uniqueIds.slice(i, i + concurrency);
+    const results = await Promise.allSettled(
+      batch.map((id) =>
+        fetchTMDB(`/movie/${id}`, {
+          append_to_response: 'credits,videos,keywords'
+        })
+      )
+    );
+
+    results.forEach((res) => {
+      if (res.status === 'fulfilled' && res.value?.id && !seenIds.has(res.value.id)) {
+        seenIds.add(res.value.id);
+        const movieObj = transformTMDBMovie(res.value, res.value);
+        movies.push(movieObj);
+      }
+    });
+
+    if (onProgress) {
+      onProgress(movies.length, uniqueIds.length);
+    }
+
+    if (i + concurrency < uniqueIds.length) {
+      await new Promise((r) => setTimeout(r, 120));
+    }
+  }
+
   return movies;
 };
 
 /**
- * Sync curated list of Indian (Bollywood/Tollywood/South) & Global movies
+ * Sync expanded catalog of Indian & Global movies from TMDB into MongoDB & static fallbacks
  */
-export const syncCuratedCatalog = async () => {
-  logger.info('Starting TMDB Curated Catalog Sync (Indian & Global Hits)...');
+export const syncCuratedCatalog = async (options = {}) => {
+  logger.info('Starting Expanded TMDB Catalog Sync (Indian & Global Hits)...');
 
-  // Curated list of high-reputation TMDB IDs:
-  // Indian masterpieces:
-  // 19404: DDLJ, 20453: 3 Idiots, 579974: RRR, 360814: Dangal, 7598: Taare Zameen Par
-  // 297222: PK, 256040: Baahubali, 350312: Baahubali 2, 560057: KGF, 872906: Jawan
-  // 14624: Sholay, 106440: Gangs of Wasseypur, 534780: Stree, 4247: Lagaan, 73783: ZNMD
-  // 376867: Andhadhun, 497814: Tumbbad, 335033: Drishyam
-  const curatedIndianIds = [
-    20453, 579974, 360814, 19404, 7598, 297222, 256040, 350312, 560057, 
-    872906, 14624, 106440, 534780, 4247, 73783, 376867, 497814, 335033
-  ];
+  const processedMovies = await fetchExpandedTMDBCatalog(options);
+  logger.info(`Fetched ${processedMovies.length} unique movies from TMDB`);
 
-  // Global Hollywood classics:
-  // 157336: Interstellar, 27205: Inception, 155: The Dark Knight, 872585: Oppenheimer
-  // 693134: Dune 2, 550: Fight Club, 278: Shawshank Redemption, 496243: Parasite
-  // 603: The Matrix, 299534: Avengers Endgame, 634649: Spider-Man No Way Home
-  // 129: Spirited Away, 76600: Avatar 2, 19995: Avatar, 680: Pulp Fiction
-  // 545611: Everything Everywhere All at Once, 438631: Dune Part 1, 929590: Civil War
-  const curatedGlobalIds = [
-    157336, 27205, 155, 872585, 693134, 550, 278, 496243, 603,
-    299534, 634649, 129, 76600, 19995, 680, 545611, 438631, 929590
-  ];
+  if (processedMovies.length > 0) {
+    await bulkUpsertMovies(processedMovies);
+    logger.info(`Upserted ${processedMovies.length} movies into MongoDB`);
 
-  const uniqueIds = Array.from(new Set([...curatedIndianIds, ...curatedGlobalIds]));
-
-  // Also fetch live trending movies to capture latest trending titles
-  try {
-    const trendingRes = await fetchTMDB('/trending/movie/week');
-    (trendingRes.results || []).slice(0, 15).forEach((m) => uniqueIds.push(m.id));
-  } catch (e) {
-    logger.warn(`Could not fetch live trending: ${e.message}`);
+    globalKNNRecommender.fit(processedMovies);
+    saveStaticFallbacks(processedMovies);
   }
-
-  // Also fetch popular Indian movies
-  try {
-    const indianPopRes = await fetchTMDB('/discover/movie', {
-      with_origin_country: 'IN',
-      sort_by: 'vote_count.desc',
-      page: 1
-    });
-    (indianPopRes.results || []).slice(0, 15).forEach((m) => uniqueIds.push(m.id));
-  } catch (e) {
-    logger.warn(`Could not fetch popular Indian movies: ${e.message}`);
-  }
-
-  const finalUniqueIds = Array.from(new Set(uniqueIds));
-  logger.info(`Fetching deep metadata for ${finalUniqueIds.length} unique TMDB titles...`);
-
-  const processedMovies = [];
-  const seenTmdbIds = new Set();
-
-  for (const id of finalUniqueIds) {
-    if (seenTmdbIds.has(id)) continue;
-    try {
-      const details = await fetchTMDB(`/movie/${id}`, {
-        append_to_response: 'credits,videos,keywords'
-      });
-
-      const isIndian = details.original_language === 'hi' ||
-        details.original_language === 'te' ||
-        details.original_language === 'ta' ||
-        details.original_language === 'ml' ||
-        (details.origin_country || []).includes('IN');
-
-      const isTopRated = details.vote_average >= 8.0;
-      const isTrending = details.popularity >= 40;
-      const isPopular = details.vote_count >= 1000 || details.popularity >= 30;
-
-      const movieObj = transformTMDBMovie(details, details, {
-        trending: isTrending,
-        popular: isPopular,
-        topRated: isTopRated,
-        recentlyReleased: (details.release_date && new Date(details.release_date).getFullYear() >= 2023)
-      });
-
-      if (isIndian && !movieObj.genres.includes('Indian Cinema')) {
-        // Tag Indian movies for UI filter ease if desired
-        movieObj.language = details.original_language;
-      }
-
-      await upsertMovie(movieObj);
-      processedMovies.push(movieObj);
-      seenTmdbIds.add(id);
-    } catch (err) {
-      logger.warn(`Skipping TMDB movie ID ${id}: ${err.message}`);
-    }
-  }
-
-  logger.info(`Successfully synced ${processedMovies.length} unique movies from TMDB into MongoDB`);
-
-  // Train Recommender with fresh data
-  globalKNNRecommender.fit(processedMovies);
-
-  // Write static fallbacks so app is resilient offline
-  saveStaticFallbacks(processedMovies);
 
   return processedMovies;
 };
 
 /**
- * Saves fetched TMDB data to seed and frontend files to completely replace dummy data
+ * Saves fetched TMDB data to seed, ML dataset, and frontend fallback files
  */
 export const saveStaticFallbacks = (movies) => {
   if (!movies || movies.length === 0) return;
@@ -341,14 +421,22 @@ export const saveStaticFallbacks = (movies) => {
 
     const frontendPath = path.resolve(__dirname, '../../src/data/moviesData.js');
     if (fs.existsSync(path.dirname(frontendPath))) {
-      const allGenres = Array.from(
-        new Set(movies.flatMap((m) => m.genres || []))
-      ).filter(Boolean);
+      const allGenres = Array.from(new Set(movies.flatMap((m) => m.genres || [])))
+        .filter((g) => g && g !== 'All')
+        .sort();
 
       const frontendCode = `/**
  * Real TMDB Movie Dataset (Auto-generated from TMDB API)
  * Total Movies: ${movies.length} (Indian & Global Masterpieces)
  */
+export const INITIAL_USER_PROFILE = {
+  name: "",
+  email: "",
+  role: "user",
+  avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+  favoriteGenres: []
+};
+
 export const ALL_GENRES = ${JSON.stringify(['All', ...allGenres], null, 2)};
 
 export const MOVIES_DATA = ${JSON.stringify(movies, null, 2)};

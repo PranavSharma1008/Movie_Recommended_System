@@ -32,7 +32,7 @@ export const getMovies = async (req, res, next) => {
     const rawMinRating = typeof req.query.minRating === 'string' ? parseFloat(req.query.minRating) : undefined;
     const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : undefined;
     const rawSearch = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 100));
+    const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit) || 100));
     const page = Math.max(1, parseInt(req.query.page) || 1);
 
     let movies = [];
@@ -102,18 +102,18 @@ export const getMovies = async (req, res, next) => {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       total = await Movie.countDocuments(query);
 
-      // If database is completely empty and no search was specified, run automatic initial TMDB sync
-      if (total === 0 && !search && !genre) {
+      // If database is completely empty and no search/genre filter was specified, run automatic initial TMDB sync
+      if (total === 0 && !rawSearch && !rawGenre) {
         try {
           const synced = await syncCuratedCatalog();
           total = synced.length;
-          movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(parseInt(limit));
+          movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(limit);
         } catch {
           movies = getFallbackMovies();
           total = movies.length;
         }
       } else {
-        movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(parseInt(limit));
+        movies = await Movie.find(query).sort(sortOptions).skip(skip).limit(limit);
       }
     } catch {
       // Graceful fallback to static JSON
@@ -121,9 +121,14 @@ export const getMovies = async (req, res, next) => {
       total = movies.length;
     }
 
-    // Ensure recommender is trained
+    // Ensure recommender is trained on full catalog (not a small paginated slice)
     if (!globalKNNRecommender.isTrained && movies.length > 0) {
-      globalKNNRecommender.fit(movies);
+      if (movies.length < total) {
+        const allForTraining = await Movie.find({}).catch(() => movies);
+        globalKNNRecommender.fit(allForTraining.length > 0 ? allForTraining : movies);
+      } else {
+        globalKNNRecommender.fit(movies);
+      }
     }
 
     res.status(200).json({

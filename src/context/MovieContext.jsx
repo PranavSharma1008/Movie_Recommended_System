@@ -24,10 +24,15 @@ export const MovieProvider = ({ children }) => {
   // Dynamic movies state initialized from real TMDB catalog
   const [movies, setMovies] = useState(() => deduplicateMovies(MOVIES_DATA));
 
-  // Sync movies from backend MongoDB / TMDB on startup
+  const mergeMovies = (incomingMovies = []) => {
+    if (!Array.isArray(incomingMovies) || incomingMovies.length === 0) return;
+    setMovies((prev) => deduplicateMovies([...incomingMovies, ...(prev || [])]));
+  };
+
+  // Sync all movies from backend MongoDB / TMDB on startup
   useEffect(() => {
     let isMounted = true;
-    api.getMovies({ limit: 100 })
+    api.getAllMovies({ pageSize: 2500 })
       .then((fetched) => {
         if (isMounted && Array.isArray(fetched) && fetched.length > 0) {
           setMovies(deduplicateMovies([...fetched, ...MOVIES_DATA]));
@@ -36,6 +41,19 @@ export const MovieProvider = ({ children }) => {
       .catch(() => {});
     return () => { isMounted = false; };
   }, []);
+
+  // Derive sorted genres dynamically from loaded movies, guaranteeing 'All' is first
+  const allGenres = useMemo(() => {
+    const genreSet = new Set(
+      (ALL_GENRES || []).filter((g) => g && g !== 'All')
+    );
+    (movies || []).forEach((m) => {
+      (m.genres || []).forEach((g) => {
+        if (g && g !== 'All') genreSet.add(g);
+      });
+    });
+    return ['All', ...Array.from(genreSet).sort()];
+  }, [movies]);
 
   const safeParseArray = (val) => {
     try {
@@ -365,7 +383,8 @@ export const MovieProvider = ({ children }) => {
     <MovieContext.Provider
       value={{
         movies,
-        allGenres: ALL_GENRES,
+        mergeMovies,
+        allGenres,
         watchlist,
         watched,
         userRatings,

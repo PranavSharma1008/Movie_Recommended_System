@@ -126,9 +126,10 @@ Multi-tier decoupled architecture:
 - [x] All-in-One launch script (`start.sh`) for single-command start
 - [x] Authored `techstack.md` and `question.md`
 - [x] Full TMDB API Integration & Secure Environment Variable Handling
-- [x] Replaced All Dummy/Mock Movie Data with 58 Authentic TMDB Movies (Indian & Global Masterpieces)
+- [x] Replaced All Dummy/Mock Movie Data with 1,095+ Authentic TMDB Movies (Indian & Global Masterpieces, 1,096 total in MongoDB)
 - [x] Strict Duplicate Prevention with unique TMDB ID indexing and MongoDB upsert logic
-- [x] Dynamic On-Demand TMDB Movie Fetching
+- [x] Dynamic On-Demand TMDB Movie Fetching & Live Search (`DiscoverPage.jsx`, `GlobalSearchModal.jsx`, `MovieDetailsPage.jsx`)
+- [x] Expanded TMDB Bulk Catalog & Pagination: Upgraded `tmdbService.js` (`api.tmdb.org` primary host with fallback), lifted the 100-movie cap in `movieController.js` / `MovieContext.jsx`, and added progressive "Load More" pagination (`DiscoverPage.jsx`) plus carousel capping (`MovieCarousel.jsx`)
 - [x] Frontend Live API Synchronization (`MovieContext.jsx`)
 - [x] Added "Indian Cinema & Blockbusters" Carousel to HomePage UI
 - [x] Production Resilience & White Screen Prevention (React `<ErrorBoundary>`, inline dark body styling, defensive `safeParseArray` / `safeParseObject` / `safeParseUser`)

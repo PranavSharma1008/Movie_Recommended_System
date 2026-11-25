@@ -1,6 +1,6 @@
 /**
  * Cinema Search & Actor Matching Intelligence
- * Supports Multi-Token, Actor Aliases, Director, Genre, and Fuzzy Search
+ * Supports Case-Insensitive, Multi-Token, Actor Aliases, Director, Genre, and Relevance Ranking
  */
 
 export const ACTOR_ALIASES = {
@@ -98,7 +98,7 @@ export const ACTOR_ALIASES = {
 };
 
 /**
- * Normalizes text by removing accents, extra punctuation, and whitespace
+ * Normalizes text by removing accents, extra punctuation, and whitespace (case-insensitive)
  */
 export const normalizeText = (text = '') => {
   return String(text)
@@ -110,75 +110,92 @@ export const normalizeText = (text = '') => {
     .trim();
 };
 
+const hasWordPrefix = (text, query) => {
+  if (!text || !query) return false;
+  return text.split(/\s+/).some((word) => word.startsWith(query));
+};
+
+const hasExactWord = (text, query) => {
+  if (!text || !query) return false;
+  return text.split(/\s+/).includes(query);
+};
+
 /**
- * Checks if a movie matches a user search query (by title, actor/cast, director, genres, keywords)
+ * Computes a case-insensitive search relevance score for ranking results.
+ * Higher score = higher priority in search results (0 = no match).
  */
-export const matchMovieSearch = (movie, rawQuery) => {
-  if (!rawQuery || !rawQuery.trim()) return true;
-  if (!movie) return false;
+export const getMovieSearchScore = (movie, rawQuery) => {
+  if (!rawQuery || !rawQuery.trim()) return 1;
+  if (!movie) return 0;
 
   const q = normalizeText(rawQuery);
-  if (!q) return true;
+  if (!q) return 1;
 
   const movieTitle = normalizeText(movie.title);
   const movieDirector = normalizeText(movie.director);
-  const movieCast = (movie.cast || []).map((c) => normalizeText(c.name || ''));
-  const movieGenres = (movie.genres || []).map((g) => normalizeText(g));
-  const movieKeywords = (movie.similarityKeywords || []).map((k) => normalizeText(k));
+  const movieCast = (movie.cast || []).map((c) => normalizeText(c.name || '')).filter(Boolean);
+  const movieGenres = (movie.genres || []).map((g) => normalizeText(g)).filter(Boolean);
+  const movieKeywords = (movie.similarityKeywords || []).map((k) => normalizeText(k)).filter(Boolean);
 
-  // 1. Direct Alias Lookup (e.g. 'sharu khan' -> 'Shah Rukh Khan', 'srk' -> 'Shah Rukh Khan')
+  // 1. Title priority tiers (highest priority)
+  if (movieTitle === q) return 1000;
+  if (movieTitle.startsWith(q)) return 850;
+  if (hasExactWord(movieTitle, q)) return 750;
+  if (hasWordPrefix(movieTitle, q)) return 680;
+  if (movieTitle.includes(q)) return 600;
+
+  // 2. Direct Actor/Director Alias Lookup (e.g. 'sharu khan' / 'srk' -> 'Shah Rukh Khan')
   const aliasMatch = ACTOR_ALIASES[q];
   if (aliasMatch) {
     const normAlias = normalizeText(aliasMatch);
-    if (movieCast.some((c) => c.includes(normAlias) || normAlias.includes(c))) return true;
-    if (movieDirector.includes(normAlias)) return true;
+    if (movieCast.some((c) => c === normAlias || c.includes(normAlias))) return 500;
+    if (movieDirector.includes(normAlias)) return 480;
   }
 
-  // 2. Direct Substring Check on Title, Cast, Director, Genres
-  if (movieTitle.includes(q)) return true;
-  if (movieDirector.includes(q)) return true;
-  if (movieCast.some((c) => c.includes(q))) return true;
-  if (movieGenres.some((g) => g.includes(q))) return true;
-  if (movieKeywords.some((k) => k.includes(q))) return true;
+  // 3. Direct Cast / Director match
+  if (movieCast.some((c) => c === q)) return 460;
+  if (movieDirector === q) return 450;
+  if (movieCast.some((c) => hasExactWord(c, q) || hasWordPrefix(c, q))) return 400;
+  if (hasExactWord(movieDirector, q) || hasWordPrefix(movieDirector, q)) return 380;
+  if (movieCast.some((c) => c.includes(q)) || movieDirector.includes(q)) return 320;
 
-  // 3. Multi-word Token Matching (e.g. 'sharu' and 'khan')
+  // 4. Multi-word Token Matching (e.g. 'sharu khan', 'dark knight')
   const tokens = q.split(/\s+/).filter((t) => t.length > 1);
-  if (tokens.length > 0) {
-    const allTokensMatch = tokens.every((token) => {
-      // Check if token directly matches title, cast, or director
-      if (movieTitle.includes(token)) return true;
-      if (movieDirector.includes(token)) return true;
-      if (movieCast.some((c) => c.includes(token))) return true;
-      if (movieGenres.some((g) => g.includes(token))) return true;
+  if (tokens.length > 1) {
+    const allTitleTokens = tokens.every((t) => movieTitle.includes(t));
+    if (allTitleTokens) return 560;
 
-      // Check if token matches an actor alias
+    const allCastOrDirectorTokens = tokens.every((token) => {
+      if (movieTitle.includes(token)) return true;
+      if (hasWordPrefix(movieDirector, token)) return true;
+      if (movieCast.some((c) => hasWordPrefix(c, token))) return true;
+      if (movieGenres.some((g) => hasWordPrefix(g, token))) return true;
+
       const subAlias = ACTOR_ALIASES[token];
       if (subAlias) {
         const normSubAlias = normalizeText(subAlias);
-        if (movieCast.some((c) => c.includes(normSubAlias))) return true;
-        if (movieDirector.includes(normSubAlias)) return true;
+        if (movieCast.some((c) => c.includes(normSubAlias)) || movieDirector.includes(normSubAlias)) {
+          return true;
+        }
       }
-
-      // Check sub-word prefixes (e.g. 'sharu' matching 'shah' or 'sharukh')
-      if (token.length >= 4) {
-        const prefix = token.slice(0, 4);
-        if (movieCast.some((c) => c.includes(prefix))) return true;
-      }
-
       return false;
     });
 
-    if (allTokensMatch) return true;
+    if (allCastOrDirectorTokens) return 260;
   }
 
-  // 4. Any Actor Token Match (if query matches any actor with length >= 3)
-  if (movieCast.some((c) => {
-    return c.split(/\s+/).some((part) => part.length >= 3 && (q.includes(part) || part.includes(q)));
-  })) {
-    return true;
-  }
+  // 5. Genre & Keyword matches (lowest priority)
+  if (movieGenres.some((g) => g === q || hasWordPrefix(g, q))) return 180;
+  if (movieKeywords.some((k) => k === q || hasWordPrefix(k, q) || k.includes(q))) return 120;
 
-  return false;
+  return 0;
+};
+
+/**
+ * Checks if a movie matches a user search query (case-insensitive)
+ */
+export const matchMovieSearch = (movie, rawQuery) => {
+  return getMovieSearchScore(movie, rawQuery) > 0;
 };
 
 /**
@@ -187,13 +204,19 @@ export const matchMovieSearch = (movie, rawQuery) => {
 export const getMovieMatchHighlight = (movie, rawQuery) => {
   if (!rawQuery || !rawQuery.trim() || !movie) return null;
   const q = normalizeText(rawQuery);
+  if (!q) return null;
+
+  // If title directly matches, don't label it as an actor/genre match
+  if (normalizeText(movie.title).includes(q)) {
+    return null;
+  }
 
   const alias = ACTOR_ALIASES[q];
   const targetActor = alias ? normalizeText(alias) : q;
 
   const matchedActor = (movie.cast || []).find((c) => {
     const norm = normalizeText(c.name);
-    return norm.includes(targetActor) || targetActor.includes(norm) || (alias && norm.includes(normalizeText(alias)));
+    return norm.includes(targetActor) || hasWordPrefix(norm, targetActor);
   });
 
   if (matchedActor) {

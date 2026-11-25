@@ -122,7 +122,7 @@ export class ClientKNNRecommender {
   }
 
   getSimilarMovies(targetMovie, allMovies = [], limit = 6) {
-    if (!this.isTrained) this.fit(allMovies);
+    if (!this.isTrained || this.movies.length !== allMovies.length) this.fit(allMovies);
     const targetVector = this.vectors.get(targetMovie.id);
     if (!targetVector) return [];
 
@@ -166,7 +166,7 @@ export class ClientKNNRecommender {
     const safeWatchedIds = Array.isArray(watchedMovieIds) ? watchedMovieIds : [];
     const safeRatings = (userRatings && typeof userRatings === 'object') ? userRatings : {};
 
-    if (!this.isTrained) this.fit(safeMovies);
+    if (!this.isTrained || this.movies.length !== safeMovies.length) this.fit(safeMovies);
     const watchedSet = new Set(safeWatchedIds.map(String));
 
     // =========================================================================
