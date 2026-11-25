@@ -1,198 +1,213 @@
-# 🎬 Movie+ — AI-Powered Movie Recommendation & Streaming Platform
+# 🎬 Movie+ — AI-Powered Movie Recommendation Platform
 
 <div align="center">
 
-![Movie+ Banner](https://img.shields.io/badge/Movie+-Cinematic_Streaming_Platform-e50914?style=for-the-badge&logo=film&logoColor=white)
+![Movie+ Banner](https://img.shields.io/badge/Movie+-Streaming_%26_Discovery-e50914?style=for-the-badge&logo=film&logoColor=white)
 
 [![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite_6-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_3-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Node.js](https://img.shields.io/badge/Node.js_v24-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express.js](https://img.shields.io/badge/Express_4-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
-[![MongoDB](https://img.shields.io/badge/MongoDB_v9-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Scikit-Learn](https://img.shields.io/badge/Scikit_Learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![Precision@K](https://img.shields.io/badge/Precision@K-99.1%25-success?style=flat-square&logo=checkmarx&logoColor=white)](#-1-intelligent-content-based-recommendation-engine-knn--tf-idf)
-[![Tests Passing](https://img.shields.io/badge/Tests-35%20Passing-brightgreen?style=flat-square&logo=vitest&logoColor=white)](#-automated-testing--verification)
+[![Tests Passing](https://img.shields.io/badge/Tests-38%20Passing-brightgreen?style=flat-square&logo=vitest&logoColor=white)](#-testing--verification)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-**Movie+** is a production-grade Full-Stack Movie Streaming and Recommendation Platform powered by Machine Learning.  
-Combines a cinematic React 18 / Vite 6 frontend, a high-throughput Node.js Express REST API, MongoDB/Mongoose persistence, and a High-Accuracy **K-Nearest Neighbors (KNN)** Content-Based Recommendation Engine with multi-attribute TF-IDF vector space modeling.
+**Movie+** is a full-stack movie discovery and recommendation app built with **React**, **Node.js / Express**, **MongoDB**, and a **K-Nearest Neighbors (KNN)** recommendation engine.  
+It ships with **1,095+ movies** across Global and Indian cinema, live **TMDB search**, **case-insensitive actor/title ranking**, **YouTube trailers**, and **real-time personalized picks**.
 
-[Quick Start](#-quick-start-guide) • [Architecture](#-architecture--tech-stack) • [REST API](#-rest-api-endpoints) • [Testing](#-automated-testing--verification) • [ML Pipeline](#-machine-learning--data-science-pipeline)
+[How It Works](#-how-it-works-for-new-users) • [Quick Start](#-quick-start-guide) • [Catalog & TMDB Sync](#-movie-catalog--tmdb-sync) • [Architecture](#-architecture--project-layout) • [API Reference](#-rest-api-endpoints) • [Troubleshooting](#-troubleshooting)
 
 </div>
 
 ---
 
-## 🌟 Key Features & Capabilities
+## 👋 What Movie+ Does
 
-### 1. 🤖 Intelligent Content-Based Recommendation Engine (KNN + TF-IDF)
-- **Multi-Attribute TF-IDF Space**: High-dimensional feature vectors combining plot synopses, genre weights (3x amplification), keywords, director signatures, and lead cast.
-- **$L_2$-Normalized Cosine Distance**: Document length-invariant metric ($D_{\text{cos}} = 1 - \mathbf{u} \cdot \mathbf{v}$) querying nearest neighbors with verified **99.1% Average Precision@K**.
-- **Cold-Start Random Discovery**: When a new user logs in (0 watched movies), the engine delivers diverse randomized discovery picks across the entire catalog.
-- **Watched-Trigger Personalization**: As soon as a user marks 1 or more movies as watched, the engine immediately computes nearest neighbors anchored to the watched titles.
-- **Actor Affinity Boost**: Movies sharing lead cast members with watched films receive an intelligent ranking boost (`"Also stars <Actor> (from <Watched Movie>)"`).
-- **Bayesian Rating Prior Smoothing**: Applies weighted IMDb formulas ($WR = \frac{v}{v+m}R + \frac{m}{v+m}C$) to prevent low-sample outlier distortion while rewarding critically acclaimed cinema.
-- **Client-Side Graceful Fallback**: Dual-mode vector fallback engine (`src/utils/recommendationEngine.js`) ensures real-time recommendations even during network outages.
+If you are opening the project for the first time, here is what each part of the app gives you:
 
-### 2. 🎭 Actor Search & Phonetic Alias Resolution
-- **Multi-Token Actor Engine**: Search by actor name, first name, last name, or common phonetic spelling variations.
-- **Phonetic & Nickname Aliases**: Intelligent query expansion maps informal searches to verified catalog stars:
-  - `"sharu khan"`, `"sharu"`, `"srk"`, `"sharukh"` $\to$ **Shah Rukh Khan** (*DDLJ*, *Swades*, *Jawan*)
-  - `"aamir"` $\to$ **Aamir Khan** (*3 Idiots*, *Dangal*, *PK*, *Lagaan*)
-  - `"prabhas"` $\to$ **Prabhas** (*Bāhubali 1 & 2*, *Kalki 2898-AD*)
-  - `"amitabh"` $\to$ **Amitabh Bachchan**, `"deepika"` $\to$ **Deepika Padukone**, `"salman"` $\to$ **Salman Khan**
-  - `"nolan"` $\to$ **Christopher Nolan**, `"cillian"` $\to$ **Cillian Murphy**, `"dicaprio"` $\to$ **Leonardo DiCaprio**
-- **Cast Card Navigation**: Every actor in the Lead Cast section is an interactive link that filters movies starring that actor in one click (`/discover?search=<actor>`).
-
-### 3. 🎯 Actor Spotlight & "Because You Watched"
-- **Actor Spotlight Carousel**: Surfaces a dedicated *"More Films Starring <Lead Actor>"* carousel whenever a watched movie shares cast members with other titles in the library.
-- **"Because You Watched" Section**: Explains exact mathematical match reasoning for recommended films (e.g., *"Similar style & themes: Shares Sci-Fi & Adventure with Interstellar"*).
-
-### 4. 📌 Clean & Isolated Watchlist System
-- **Strict User Intent Isolation**: Movies are added to the Watchlist **only** when the user explicitly clicks the Bookmark button.
-- **Decoupled History & Ratings**: Marking a film as "Watched" or submitting a star rating updates recommendation weights without cluttering the user's Watchlist queue.
-- **Zero Pre-Seeded Clutter**: Every new account starts with a 100% clean, empty Watchlist queue.
-- **Zero Data Loss Guarantee**: Local state synchronization with `isLoadedRef` protection prevents race conditions during user authentication transitions.
-
-### 5. 👤 Profile & Device Photo Upload
-- **Interactive Camera Avatar Upload**: Hovering over the profile picture reveals a camera button that directly opens the device's file picker.
-- **Custom Image Upload**: Upload any personal photo (PNG, JPG, WebP) with instant `FileReader` preview and backend storage via `POST /api/upload/avatar`.
-- **Custom URL & Persona Presets**: Alternatively paste a direct photo URL or select from curated personas.
-- **Watchlist Showcase**: Displays saved bookmarks and completed viewing history directly on the profile page.
-
-### 6. 🎨 Official Movie+ Branding & Cinema UI
-- **Modern Streaming Aesthetic**: Custom vector brand emblem featuring a cinema clapperboard, glowing play triangle, and radiant `+` streaming mark.
-- **Interactive Trailer Modal**: Modal YouTube player with auto-pause on close and keyboard `Esc` dismiss.
-- **Real-Time Global Search (Cmd+K / Ctrl+K)**: Instant keyboard-driven search modal with actor match highlights and live debounce.
-- **Production Resilience**: Protected with React `<ErrorBoundary>`, dark body fallback, and defensive JSON parsers to eliminate white-screen failure modes.
-
-### 7. 🔒 Production Security & Hardening
-- **Email OTP Verification**: Real-world 6-digit email verification via Nodemailer / Gmail SMTP before account activation.
-- **Stateless JWT & Bcrypt**: Passwords salted and hashed with Bcrypt (10 rounds); authorization via Bearer JWT tokens.
-- **Defense-in-Depth**: Express Rate Limiting, Helmet HTTP security headers, CORS origin restriction, sensitive field redaction (passwords, tokens, OTPs) in structured Winston logs, and daily log rotation (`winston-daily-rotate-file`).
+- **Explore 1,095+ Movies Offline or Online**: Browse Global blockbusters, Top Rated classics, Now Playing releases, and Indian Cinema (Hindi, Telugu, Tamil, Malayalam, Kannada) right away—even without an internet connection, thanks to synced local fallbacks.
+- **Find Any Movie via Live TMDB Search**: Searching in **Discover** (`/discover`) or **Global Search** (`Ctrl+K` / `Cmd+K`) automatically queries TMDB's live catalog when local results are sparse and saves newly found titles into MongoDB.
+- **Smart Case-Insensitive & Actor-Alias Search**: Typing `ramayana`, `RAMAYANA`, or `Ramayana` produces identical top-ranked title matches. Searching nicknames like `srk`, `sharu khan`, `aamir`, `prabhas`, or `nolan` resolves directly to the corresponding actor or director.
+- **Recommendations That Adapt to You**:
+  - **New Users (0 watched movies)**: Receive randomized discovery picks across the catalog instead of stale hardcoded suggestions.
+  - **After Watching 1+ Movies**: The KNN engine compares TF-IDF vectors (genres, plot, keywords, director, and lead cast) and immediately ranks similar films with match percentages and plain-English reasons.
+- **Clean Watchlist vs. Watched History**: Bookmarking adds a movie to your **Watchlist**. Marking a movie as **Watched** or rating it (1–5 stars) trains your recommendations without cluttering your Watchlist.
+- **Accounts, Email OTP & Custom Avatars**: Register with email OTP verification (via Gmail SMTP), sign in with JWT sessions, and upload a custom profile image from your device.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## 🧭 How It Works (User Walkthrough)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      FRONTEND TIER (Port 5173)                              │
-│  • React 18 + Vite 6 + Tailwind CSS       • Context API (Auth, Movie, Toast)│
-│  • BrandLogo Vector System                • Real-time Global Search (Cmd+K) │
-│  • Reverse Proxy (/api -> :5001)          • Responsive Streaming Layout     │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ HTTP REST / JSON (Bearer JWT)
-                                       ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      BACKEND API TIER (Port 5001)                           │
-│  • Node.js v24 (ES Modules)               • Express 4 RESTful Architecture  │
-│  • JWT Auth & Bcrypt Password Hashing     • Multer Multipart Media Storage  │
-│  • Gmail SMTP Verification Engine         • Winston Logger + Morgan Tracing │
-│  • Rate Limiting & Helmet Security        • Actor Regex Query Expansion     │
-└───────────────────┬─────────────────────────────────────┬───────────────────┘
-                    │                                     │
-                    ▼                                     ▼
-┌──────────────────────────────────────┐  ┌───────────────────────────────────┐
-│     DATABASE TIER (Port 27017)       │  │    DATA SCIENCE & ML PIPELINE     │
-│ • MongoDB v9.0 (cinepulse_db)        │  │ • Python 3.12 / Scikit-Learn 1.9  │
-│ • Mongoose 8.x Document Models       │  │ • 500-D TF-IDF Vector Space       │
-│ • Compound Unique & Text Indexes     │  │ • Cosine Distance Nearest Neighbor│
-│ • Isolated inWatchlist Tracking      │  │ • Verified 99.1% Precision@K      │
-│ • Collections: users, movies,        │  │ • Rating Regression RMSE: 0.6789  │
-│   ratings, watchlists                │  │ • Jupyter Notebook Demonstration  │
-└──────────────────────────────────────┘  └───────────────────────────────────┘
-```
-
-### 📂 Directory Structure
-
-```bash
-Movie Recommended System/
-├── src/                          # React 18 Frontend Application
-│   ├── components/               # Navbar, HeroBanner, MovieCard, BrandLogo, Modals
-│   ├── context/                  # AuthContext, MovieContext, ToastContext
-│   ├── data/                     # 58 curated TMDB movie records
-│   ├── pages/                    # HomePage, DiscoverPage, MovieDetails, Profile, Watchlist
-│   ├── utils/                    # recommendationEngine.js, searchHelper.js, imageHelper.js
-│   ├── App.jsx                   # Main React Router application
-│   └── main.jsx                  # Application entry point
-├── server/                       # Node.js Express REST API
-│   ├── config/                   # db.js (Mongoose retry), logger.js (Winston daily rotate)
-│   ├── controllers/              # authController, movieController, recommendationController, ...
-│   ├── middleware/               # authMiddleware, rateLimiter, uploadMiddleware, errorMiddleware
-│   ├── models/                   # User.js, Movie.js, Rating.js, Watchlist.js
-│   ├── routes/                   # authRoutes, movieRoutes, recommendationRoutes, ...
-│   ├── services/                 # tmdbService.js, emailService.js
-│   ├── utils/                    # knnRecommender.js, seeder.js
-│   ├── tests/                    # Supertest API integration tests
-│   └── server.js                 # Express server bootstrap
-├── tests/                        # Automated Test Suites
-│   ├── unit/                     # Vitest unit tests (recommender, sanitization, auth)
-│   └── e2e/                      # Playwright end-to-end browser tests
-├── docker-compose.yml            # Multi-container orchestration
-├── start.sh                      # 1-Click launcher script
-├── train_recommender.py          # Standalone Python ML training script
-└── movie_recommendation_knn.ipynb# Interactive Jupyter notebook
-```
+1. **Open the App (`http://localhost:5173`)**: Browse carousels for *Recommended For You*, *Trending*, *Indian Cinema & Blockbusters*, *Popular Worldwide*, *Top Rated*, and *Recently Released*.
+2. **Search Everything (`Cmd+K` / `Ctrl+K` or `/discover`)**:
+   - Filter by genre (`All` is always first), minimum rating (`7.5+`, `8.0+`, `8.5+`), or sort order.
+   - Discover displays `48` movies per batch with a **Load More Movies** button so browsing 1,000+ titles stays fast.
+   - Need a title not in the local 1,095-movie library? Click **Fetch More from TMDB** or wait half a second while typing to pull live results from TMDB.
+3. **Inspect Any Movie (`/movie/:id`)**: Watch the embedded YouTube trailer, read cast details, click any actor card to view their films, or jump straight to a TMDB movie ID in the URL (fetched on demand if not yet cached).
+4. **Personalize Your Feed (`/recommendations`)**: Toggle favorite genres, mark films watched, or rate movies to see your match scores update live, including an **Actor Spotlight** row featuring more films starring the lead cast of your last watched movie.
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### Option 1: 1-Click Launch Script (Recommended)
+### Prerequisites
 
-Launch both the Express backend and Vite frontend with a single command:
+- **Node.js** `v18+` (tested with Node.js v24)
+- **MongoDB** running locally on port `27017` *(optional—if MongoDB is stopped, the app falls back to local JSON data automatically)*
+- **Python 3.10+** *(optional—only needed if you want to run the standalone ML training script or Jupyter notebook in `ml_pipeline/`)*
+
+### Option 1: One-Command Launch (macOS / Linux)
 
 ```bash
 ./start.sh
 ```
 
-*(Or simply run `npm start` from the project root).*
+*(Or run `npm start` from the project root.)*
 
-Press `Ctrl + C` at any time to cleanly stop all running processes.
+This script checks MongoDB, installs missing dependencies, starts the Express API on `http://localhost:5001`, starts the Vite UI on `http://localhost:5173`, and opens your browser. Press `Ctrl + C` to stop both servers cleanly.
 
 ---
 
-### Option 2: Manual Step-by-Step Launch
+### Option 2: Manual Setup (Step-by-Step)
 
-#### 1. Prerequisites
-- **Node.js**: `v18+` or `v24+`
-- **MongoDB**: Active daemon running on `localhost:27017`
+#### 1. Configure Environment Variables
 
-#### 2. Start the Backend Server
+Copy the example environment file in `server/` and add your keys:
+
 ```bash
-# Navigate to server directory
-cd server
+cp server/.env.example server/.env
+```
+
+Edit `server/.env`:
+
+```env
+PORT=5001
+NODE_ENV=development
+MONGO_URI=mongodb://127.0.0.1:27017/cinepulse_db
+JWT_SECRET=replace_with_a_strong_random_secret
+CLIENT_URL=http://localhost:5173
+TMDB_API_KEY=your_tmdb_v3_api_key
+TMDB_READ_ACCESS_TOKEN=your_tmdb_read_access_token
+```
+
+> **Optional Email OTP Variables**: To send live registration/login verification emails via Gmail, also configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and `SMTP_PASS` (Gmail App Password) in `server/.env`.
+
+#### 2. Install Dependencies & Seed the Database
+
+```bash
+# Install root (frontend) dependencies
+npm install
 
 # Install backend dependencies
-npm install
+cd server && npm install
 
-# Start the Express REST API (Runs on http://localhost:5001)
+# (Optional) Seed MongoDB with moviesSeed.json, demo users, and sample ratings
+npm run seed
+```
+
+#### 3. Start Backend and Frontend
+
+In terminal 1 (Backend on port `5001`):
+
+```bash
+cd server
 npm start
 ```
-*(Outputs: `MongoDB Connected successfully: 127.0.0.1/cinepulse_db` and `Trained High-Accuracy KNN Recommender on 58 movie feature vectors`).*
 
-#### 3. Start the Frontend Application
-In a separate terminal window:
+In terminal 2 (Frontend on port `5173`):
+
 ```bash
-# In the project root directory
-npm install
-
-# Start the Vite development server
 npm run dev
 ```
-Open **[http://localhost:5173](http://localhost:5173)** in your browser.
+
+Open **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
-### Option 3: Docker Compose Launch
+### Option 3: Docker Compose
 
-Run the complete multi-container stack in isolated Docker containers:
+Run MongoDB, the Express backend, and the frontend together in containers:
 
 ```bash
 docker-compose up --build
+```
+
+---
+
+## 🎞️ Movie Catalog & TMDB Sync
+
+The project stores synced movie metadata in four places so both the database and offline/client fallback engines stay in sync:
+
+- **MongoDB**: `cinepulse_db.movies`
+- **Backend seed**: `server/data/moviesSeed.json`
+- **Frontend bundle fallback**: `src/data/moviesData.js`
+- **ML dataset**: `ml_pipeline/data/movies_dataset.json`
+
+To refresh or expand the catalog directly from TMDB (requires `TMDB_API_KEY` in `server/.env`):
+
+```bash
+cd server
+node scripts/syncTMDBStatic.js
+```
+
+> **Network Note**: The TMDB service (`server/services/tmdbService.js`) uses `https://api.tmdb.org/3` as its primary host with automatic fallback to `https://api.themoviedb.org/3`, so catalog sync and live search still work on ISPs that block `api.themoviedb.org`.
+
+---
+
+## 🏗️ Architecture & Project Layout
+
+```text
+Frontend (React 18 + Vite 6 + Tailwind CSS — Port 5173)
+  ├── Proxies /api and /uploads to :5001
+  ├── Client-side KNN fallback (src/utils/recommendationEngine.js)
+  └── Case-insensitive ranked search (src/utils/searchHelper.js)
+           │
+           ▼  REST / JSON + Bearer JWT
+Backend (Node.js + Express 4 — Port 5001)
+  ├── Auth & OTP verification (JWT, Bcrypt, Nodemailer)
+  ├── Catalog, live TMDB search & bulk sync (tmdbService.js)
+  ├── In-memory TF-IDF KNN recommender (knnRecommender.js)
+  └── Security & logs (Helmet, Rate Limit, Multer, Winston)
+           │
+           ▼
+Database (MongoDB — Port 27017) + Offline ML Pipeline (ml_pipeline/)
+```
+
+### Directory Structure
+
+```text
+Movie Recommended System/
+├── src/
+│   ├── components/          # BrandLogo, Navbar, HeroBanner, MovieCard, MovieCarousel, Modals
+│   ├── context/             # AuthContext, MovieContext, ToastContext
+│   ├── data/moviesData.js   # Local TMDB catalog fallback (1,095+ movies) & default profile
+│   ├── pages/               # HomePage, DiscoverPage, MovieDetailsPage, RecommendationsPage, WatchlistPage, ProfilePage, LoginPage
+│   ├── services/api.js      # Frontend HTTP client wrapping /api endpoints
+│   └── utils/               # recommendationEngine.js, searchHelper.js
+├── server/
+│   ├── config/              # db.js, env.js, logger.js (Winston daily rotation + redaction)
+│   ├── controllers/         # authController, movieController, recommendationController, watchlistController, uploadController
+│   ├── data/moviesSeed.json # MongoDB seed dataset (1,095+ TMDB movies)
+│   ├── middleware/          # authMiddleware, errorMiddleware, rateLimiter, uploadMiddleware
+│   ├── models/              # User.js, Movie.js, Rating.js, Watchlist.js
+│   ├── routes/              # authRoutes, movieRoutes, recommendationRoutes, watchlistRoutes, uploadRoutes
+│   ├── scripts/             # syncTMDBStatic.js (bulk TMDB catalog sync)
+│   ├── services/            # tmdbService.js
+│   ├── tests/               # api.test.js (Supertest integration suite)
+│   └── utils/               # emailService.js, knnRecommender.js, seeder.js
+├── ml_pipeline/
+│   ├── data/                # movies_dataset.json
+│   ├── output/              # movie_features_knn.json
+│   ├── train_recommender.py # Scikit-Learn TF-IDF, KNN, Ridge Regression & K-Means pipeline
+│   └── movie_recommendation_knn.ipynb
+├── tests/
+│   ├── unit/                # recommender.test.js, sanitization.test.js, searchHelper.test.js, userAuth.test.js
+│   └── e2e/                 # smoke.spec.js (Playwright browser tests)
+├── docker-compose.yml
+└── start.sh
 ```
 
 ---
@@ -201,73 +216,74 @@ docker-compose up --build
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | Public | System health check and KNN engine training status |
-| `POST` | `/api/auth/register` | Public | Register user account with Gmail SMTP verification OTP |
-| `POST` | `/api/auth/verify-otp` | Public | Verify 6-digit email OTP security code |
-| `POST` | `/api/auth/resend-otp` | Public | Resend verification OTP code (with cooldown) |
-| `POST` | `/api/auth/login` | Public | Authenticate user; returns signed JWT token |
-| `GET` | `/api/auth/profile` | Private | Retrieve authenticated user profile |
-| `PUT` | `/api/auth/profile` | Private | Update display name, email, bio, or favorite genres |
-| `GET` | `/api/movies` | Public | Query catalog with actor, title, genre, and rating filters |
-| `GET` | `/api/movies/:id` | Public | Movie details with pre-queried K-nearest neighbors |
-| `GET` | `/api/movies/meta/genres` | Public | Distinct list of all genres in the catalog (All first) |
-| `POST` | `/api/recommendations` | Public/Auth | High-Accuracy personalized KNN recommendations |
-| `GET` | `/api/recommendations/similar/:id` | Public | Top $K$ nearest neighbors for a target movie |
-| `GET` | `/api/watchlist` | Private | Fetch user's saved watchlist and watched history |
-| `POST` | `/api/watchlist/toggle` | Private | Explicitly add/remove title from watchlist queue |
-| `POST` | `/api/watchlist/watched` | Private | Toggle movie watched/completed status |
-| `POST` | `/api/watchlist/rate` | Private | Submit 1–5 star rating and update preference weights |
-| `POST` | `/api/upload/avatar` | Private | Upload custom profile picture (Multer storage) |
+| `GET` | `/api/health` | Public | Server status and KNN engine training state |
+| `POST` | `/api/auth/register` | Public | Register a new user and send email verification OTP |
+| `POST` | `/api/auth/verify-email` | Public | Verify registration OTP and activate account |
+| `POST` | `/api/auth/login` | Public | Authenticate user and trigger/issue JWT session |
+| `POST` | `/api/auth/verify-login-otp` | Public | Verify login OTP and return JWT token |
+| `POST` | `/api/auth/resend-otp` | Public | Resend verification OTP code |
+| `GET` | `/api/auth/me` | Private | Fetch currently authenticated user |
+| `PUT` | `/api/auth/profile` | Private | Update profile details and favorite genres |
+| `GET` | `/api/movies` | Public | Query catalog (`genre`, `language`, `minRating`, `search`, `sort`, `page`, `limit` up to `5000`) |
+| `GET` | `/api/movies/meta/genres` | Public | Unique catalog genres with `"All"` first |
+| `GET` | `/api/movies/search/live` | Public | Live TMDB search (`?q=...`) that caches results to MongoDB |
+| `GET` | `/api/movies/:id` | Public | Fetch movie details + similar movies (falls back to live TMDB by ID) |
+| `POST` | `/api/movies/sync-tmdb` | Admin | Trigger full TMDB catalog sync (requires `admin` JWT) |
+| `POST` | `/api/recommendations` | Public / Auth | Personalized KNN recommendations with match scores |
+| `GET` | `/api/recommendations/similar/:id` | Public | Top-$K$ similar movies for a given movie ID |
+| `GET` | `/api/watchlist` | Private | Retrieve user's watchlist, watched IDs, and ratings |
+| `POST` | `/api/watchlist/toggle` | Private | Add or remove a movie from the Watchlist |
+| `POST` | `/api/watchlist/watched` | Private | Toggle watched status for a movie |
+| `POST` | `/api/watchlist/rate` | Private | Submit a 1–5 star rating |
+| `POST` | `/api/upload/avatar` | Private | Upload a custom profile avatar image (`multipart/form-data`) |
 
 ---
 
-## 🧪 Automated Testing & Verification
+## 🧠 Machine Learning Pipeline
 
-Movie+ is thoroughly tested with 35 passing tests across unit, integration, and end-to-end browser tiers:
+Both the live Node.js engine (`server/utils/knnRecommender.js`, `src/utils/recommendationEngine.js`) and the Python offline pipeline (`ml_pipeline/train_recommender.py`) model movies as $L_2$-normalized TF-IDF vectors over plot descriptions, genres ($3\times$ weight), keywords ($2\times$ weight), director ($2\times$ weight), and lead cast.
+
+- **Similarity Metric**: Cosine Distance:
+  $$D_{\text{cos}}(\mathbf{u}, \mathbf{v}) = 1 - \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$$
+- **Python Offline Evaluation** (`cd ml_pipeline && pip install -r requirements.txt && python train_recommender.py`):
+  - Content-based KNN (`metric="cosine"`)
+  - Ridge Regression rating prediction
+  - K-Means clustering + 2D PCA projection
+  - Interactive analysis in `ml_pipeline/movie_recommendation_knn.ipynb`
+
+---
+
+## 🧪 Testing & Verification
+
+The project includes **38 automated tests** across unit, API integration, and browser E2E layers:
 
 ```bash
-# 1. Run Vitest Unit Tests (Recommender Cosine Similarity, Input Sanitization, Auth)
+# Run all Vitest suites (21 unit tests + 12 API integration tests = 33 tests)
 npm test
 
-# 2. Run Backend API Integration Tests (Supertest route validation & security)
+# Run backend Supertest suite directly
 npm run test:api
 
-# 3. Run Playwright End-to-End Browser Tests (Chromium user journey validation)
+# Run Playwright Chromium E2E tests (5 browser tests)
 npm run test:e2e
 
-# 4. Production Build Verification
+# Verify Vite production bundle
 npm run build
 ```
 
-### Test Suite Summary:
-- **18 Unit Tests**: TF-IDF vectorization, $L_2$-norm cosine similarity, Bayesian smoothing, input sanitization, JWT authorization.
-- **12 API Integration Tests**: Route security, ReDoS regex injection prevention, OTP validation gate, rate limiting.
-- **5 Playwright E2E Tests**: Brand header rendering, global search modal interaction, login accessible form controls, catalog filters, and white-screen error boundary resilience.
-- **Production Build**: Clean Vite build generating optimized bundles with zero compilation errors.
-
 ---
 
-## 🧠 Machine Learning & Data Science Pipeline
+## 🛠️ Troubleshooting
 
-- **Algorithm**: Content-Based Filtering using **K-Nearest Neighbors (KNN)** with Cosine Distance metric:
-  $$D_{\text{cos}}(\mathbf{u}, \mathbf{v}) = 1 - \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$$
-- **Vector Space**: 500-dimensional TF-IDF feature space spanning overview text, genres ($3\times$ weighted), director signature, lead cast, and keywords.
-- **Accuracy**: Verified **99.1% Average Precision@K** evaluated across top-$K$ recommendations.
-- **Supervised Regression**: Ridge Regression model predicting user ratings with **RMSE: 0.6789** and **MAE: 0.5781**.
-- **Clustering & Dimensionality Reduction**: K-Means clustering with Silhouette Score validation, visualized via 2D Principal Component Analysis (PCA).
-- **Notebook**: Open `movie_recommendation_knn.ipynb` in Jupyter Notebook or VS Code to interactively inspect data distributions, eigenvalue plots, and similarity heatmaps.
+- **Only seeing older data after updating the catalog**: Restart the backend and refresh the browser tab so `MovieContext` fetches the updated `/api/movies` response instead of an older running process.
+- **MongoDB is not running**: Start MongoDB (`brew services start mongodb-community` on macOS or `sudo systemctl start mongod` on Linux), or let the server fall back automatically to `server/data/moviesSeed.json` and `src/data/moviesData.js`.
+- **TMDB requests fail or time out**: Confirm `TMDB_API_KEY` is set in `server/.env`. The client automatically falls back between `api.tmdb.org` and `api.themoviedb.org` if one host is blocked by your network.
+- **Ports `5001` or `5173` already in use**: `./start.sh` clears stale processes on both ports automatically, or stop them manually with `lsof -ti :5001,5173 | xargs kill -9`.
 
 ---
 
 ## 📄 License & Attribution
 
-- Built with **React 18**, **Vite 6**, **Tailwind CSS**, **Node.js**, **Express.js**, and **MongoDB**.
-- Movie metadata, posters, backdrops, and cast information provided by **The Movie Database (TMDB)**.
-- Video trailers powered by **YouTube Embed API**.
-- Distributed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-  <sub>Designed & Developed by Pranav Sharma • © 2026 Movie+ Platform. All rights reserved.</sub>
-</div>
+- Movie metadata, posters, backdrops, and cast profiles are sourced from **The Movie Database (TMDB)**.
+- Trailers are played via the **YouTube Embed API**.
+- Licensed under the [MIT License](LICENSE).
